@@ -58,8 +58,6 @@ class _SeatSelectionPageState extends State<SeatSelectionPage> {
   @override
   Widget build(BuildContext context) {
     final totalPrice = _selectedSeats.length * widget.route.pricePerSeat;
-    final columns = 5;
-    final rows = (widget.route.totalSeats / columns).ceil();
 
     return Scaffold(
       appBar: AppBar(
@@ -74,7 +72,7 @@ class _SeatSelectionPageState extends State<SeatSelectionPage> {
             color: AppTheme.primaryColor.withValues(alpha: 0.05),
             child: Row(
               children: [
-                const Icon(Icons.directions_bus, color: AppTheme.primaryColor),
+                const Icon(Icons.directions_car, color: AppTheme.primaryColor),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Column(
@@ -96,7 +94,7 @@ class _SeatSelectionPageState extends State<SeatSelectionPage> {
                   ),
                 ),
                 Text(
-                  '₦${NumberFormat('#,##0').format(widget.route.pricePerSeat)}/seat',
+                  '\$${NumberFormat('#,##0.00').format(widget.route.pricePerSeat)}/seat',
                   style: GoogleFonts.inter(
                     fontSize: 14,
                     fontWeight: FontWeight.w700,
@@ -126,10 +124,10 @@ class _SeatSelectionPageState extends State<SeatSelectionPage> {
               padding: const EdgeInsets.symmetric(horizontal: 24),
               child: Column(
                 children: [
-                  // Front of bus
+                  // Front of car (driver seat)
                   Container(
                     margin: const EdgeInsets.only(bottom: 16),
-                    padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 24),
+                    padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 24),
                     decoration: BoxDecoration(
                       color: Colors.grey[300],
                       borderRadius: const BorderRadius.only(
@@ -143,7 +141,7 @@ class _SeatSelectionPageState extends State<SeatSelectionPage> {
                         Icon(Icons.drive_eta, color: Colors.grey[600], size: 18),
                         const SizedBox(width: 8),
                         Text(
-                          'FRONT',
+                          'DRIVER',
                           style: TextStyle(
                             color: Colors.grey[600],
                             fontWeight: FontWeight.w600,
@@ -155,30 +153,26 @@ class _SeatSelectionPageState extends State<SeatSelectionPage> {
                     ),
                   ),
 
-                  // Seats
-                  for (int row = 0; row < rows; row++)
-                    Padding(
-                      padding: const EdgeInsets.only(bottom: 8),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          for (int col = 0; col < columns; col++) ...[
-                            if (col == 2) const SizedBox(width: 24), // Aisle
-                            Builder(
-                              builder: (context) {
-                                final seatNumber = row * columns + col + 1;
-                                if (seatNumber > widget.route.totalSeats) {
-                                  return const SizedBox(width: 52, height: 52);
-                                }
-                                final isTaken = _takenSeats.contains(seatNumber);
-                                final isSelected = _selectedSeats.contains(seatNumber);
-                                return _buildSeat(seatNumber, isTaken, isSelected);
-                              },
-                            ),
-                          ],
-                        ],
-                      ),
-                    ),
+                  // Passenger seats (up to 3 in a row)
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      for (int i = 1; i <= widget.route.totalSeats; i++)
+                        Builder(
+                          builder: (context) {
+                            final isTaken = _takenSeats.contains(i);
+                            final isSelected = _selectedSeats.contains(i);
+                            return _buildSeat(i, isTaken, isSelected);
+                          },
+                        ),
+                    ],
+                  ),
+
+                  const SizedBox(height: 16),
+                  Text(
+                    '${widget.route.totalSeats} passenger seats per car',
+                    style: TextStyle(color: Colors.grey[500], fontSize: 12),
+                  ),
                 ],
               ),
             ),
@@ -224,7 +218,7 @@ class _SeatSelectionPageState extends State<SeatSelectionPage> {
                         ],
                       ),
                       Text(
-                        '₦${NumberFormat('#,##0').format(totalPrice)}',
+                        '\$${NumberFormat('#,##0.00').format(totalPrice)}',
                         style: GoogleFonts.inter(
                           fontSize: 24,
                           fontWeight: FontWeight.w800,

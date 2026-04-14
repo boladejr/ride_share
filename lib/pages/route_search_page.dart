@@ -207,7 +207,7 @@ class _RouteCard extends StatelessWidget {
                         ),
                         const SizedBox(width: 4),
                         Text(
-                          '${route.availableSeats} seats left',
+                          '${route.availableSeats} seat${route.availableSeats != 1 ? 's' : ''} left',
                           style: TextStyle(
                             fontSize: 13,
                             fontWeight: FontWeight.w600,
@@ -222,7 +222,7 @@ class _RouteCard extends StatelessWidget {
                   const Spacer(),
                   // Price
                   Text(
-                    '₦${NumberFormat('#,##0').format(route.pricePerSeat)}',
+                    '\$${NumberFormat('#,##0.00').format(route.pricePerSeat)}',
                     style: GoogleFonts.inter(
                       fontSize: 20,
                       fontWeight: FontWeight.w800,

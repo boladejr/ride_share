@@ -118,7 +118,7 @@ class _AdminPanelPageState extends State<AdminPanelPage>
                   subtitle: Text(
                     '${DateFormat('EEE, MMM d • hh:mm a').format(route.departureTime)} • '
                     '${route.totalSeats} seats • '
-                    '₦${NumberFormat('#,##0').format(route.pricePerSeat)}/seat',
+                    '\$${NumberFormat('#,##0.00').format(route.pricePerSeat)}/seat',
                     style: const TextStyle(fontSize: 12),
                   ),
                   trailing: Row(
@@ -147,7 +147,7 @@ class _AdminPanelPageState extends State<AdminPanelPage>
     final originCtrl = TextEditingController();
     final destCtrl = TextEditingController();
     final priceCtrl = TextEditingController();
-    final seatsCtrl = TextEditingController(text: '15');
+    final seatsCtrl = TextEditingController(text: '3');
     final pickupCtrl = TextEditingController();
     TimeOfDay selectedTime = TimeOfDay.now();
 
@@ -193,13 +193,13 @@ class _AdminPanelPageState extends State<AdminPanelPage>
                 ),
                 TextField(
                   controller: priceCtrl,
-                  decoration: const InputDecoration(labelText: 'Price per Seat (₦)'),
+                  decoration: const InputDecoration(labelText: 'Price per Seat (\$)'),
                   keyboardType: TextInputType.number,
                 ),
                 const SizedBox(height: 8),
                 TextField(
                   controller: seatsCtrl,
-                  decoration: const InputDecoration(labelText: 'Total Seats'),
+                  decoration: const InputDecoration(labelText: 'Passenger Seats'),
                   keyboardType: TextInputType.number,
                 ),
                 const SizedBox(height: 8),
@@ -230,7 +230,7 @@ class _AdminPanelPageState extends State<AdminPanelPage>
                   selectedTime.hour,
                   selectedTime.minute,
                 );
-                final seats = int.tryParse(seatsCtrl.text) ?? 15;
+                final seats = int.tryParse(seatsCtrl.text) ?? 3;
                 _dataService.addRoute(RouteModel(
                   id: _dataService.generateRouteId(),
                   origin: originCtrl.text,
@@ -241,7 +241,7 @@ class _AdminPanelPageState extends State<AdminPanelPage>
                   availableSeats: seats,
                   pricePerSeat: double.tryParse(priceCtrl.text) ?? 0,
                   pickupPoint: pickupCtrl.text.isEmpty
-                      ? '${originCtrl.text} Bus Terminal'
+                      ? '${originCtrl.text} Pickup Point'
                       : pickupCtrl.text,
                 ));
                 setState(() {});
@@ -272,13 +272,13 @@ class _AdminPanelPageState extends State<AdminPanelPage>
             children: [
               TextField(
                 controller: priceCtrl,
-                decoration: const InputDecoration(labelText: 'Price per Seat (₦)'),
+                decoration: const InputDecoration(labelText: 'Price per Seat (\$)'),
                 keyboardType: TextInputType.number,
               ),
               const SizedBox(height: 8),
               TextField(
                 controller: seatsCtrl,
-                decoration: const InputDecoration(labelText: 'Total Seats'),
+                decoration: const InputDecoration(labelText: 'Passenger Seats'),
                 keyboardType: TextInputType.number,
               ),
               const SizedBox(height: 8),
@@ -380,7 +380,7 @@ class _AdminPanelPageState extends State<AdminPanelPage>
                       ),
                       _bookingDetail(
                         'Amount',
-                        '₦${NumberFormat('#,##0').format(booking.totalPrice)}',
+                        '\$${NumberFormat('#,##0.00').format(booking.totalPrice)}',
                       ),
                       if (booking.paymentStatus == PaymentStatus.paid) ...[
                         const SizedBox(height: 8),
@@ -522,7 +522,7 @@ class _AdminPanelPageState extends State<AdminPanelPage>
                       crossAxisAlignment: CrossAxisAlignment.end,
                       children: [
                         Text(
-                          '₦${NumberFormat('#,##0').format(driver.totalPayout)}',
+                          '\$${NumberFormat('#,##0.00').format(driver.totalPayout)}',
                           style: GoogleFonts.inter(
                             fontWeight: FontWeight.w700,
                             color: AppTheme.primaryColor,
@@ -645,7 +645,7 @@ class _AdminPanelPageState extends State<AdminPanelPage>
               style: GoogleFonts.inter(fontWeight: FontWeight.w600),
             ),
             subtitle: Text(
-              'Current: ₦${NumberFormat('#,##0').format(route.pricePerSeat)}/seat',
+              'Current: \$${NumberFormat('#,##0.00').format(route.pricePerSeat)}/seat',
               style: const TextStyle(fontSize: 13),
             ),
             trailing: ElevatedButton(
@@ -660,8 +660,8 @@ class _AdminPanelPageState extends State<AdminPanelPage>
                     content: TextField(
                       controller: priceCtrl,
                       decoration: const InputDecoration(
-                        labelText: 'Price per Seat (₦)',
-                        prefixText: '₦ ',
+                        labelText: 'Price per Seat (\$)',
+                        prefixText: '\$ ',
                       ),
                       keyboardType: TextInputType.number,
                       autofocus: true,
@@ -683,7 +683,7 @@ class _AdminPanelPageState extends State<AdminPanelPage>
                             ScaffoldMessenger.of(context).showSnackBar(
                               SnackBar(
                                 content: Text(
-                                  'Price updated to ₦${NumberFormat('#,##0').format(newPrice)}',
+                                  'Price updated to \$${NumberFormat('#,##0.00').format(newPrice)}',
                                 ),
                                 backgroundColor: AppTheme.successColor,
                               ),

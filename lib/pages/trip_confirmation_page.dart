@@ -67,7 +67,7 @@ class _TripConfirmationPageState extends State<TripConfirmationPage> {
       case TripStatus.notStarted:
         return Icons.schedule;
       case TripStatus.inProgress:
-        return Icons.directions_bus;
+        return Icons.directions_car;
       case TripStatus.completed:
         return Icons.check_circle;
     }
@@ -211,7 +211,7 @@ class _TripConfirmationPageState extends State<TripConfirmationPage> {
                   _detailRow(
                     Icons.payments,
                     'Total Paid',
-                    '₦${NumberFormat('#,##0').format(booking.totalPrice)}',
+                    '\$${NumberFormat('#,##0.00').format(booking.totalPrice)}',
                   ),
                 ],
               ),
@@ -356,7 +356,7 @@ class _TripConfirmationPageState extends State<TripConfirmationPage> {
                                 ],
                               ),
                               child: const Icon(
-                                Icons.directions_bus,
+                                Icons.directions_car,
                                 color: Colors.white,
                                 size: 16,
                               ),

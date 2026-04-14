@@ -14,7 +14,7 @@ class DriverDashboardPage extends StatefulWidget {
 
 class _DriverDashboardPageState extends State<DriverDashboardPage> {
   final _dataService = MockDataService();
-  // Simulating logged-in driver (driver_1 - Ibrahim Musa)
+  // Simulating logged-in driver (driver_1 - Carlos Rivera)
   final String _currentDriverId = 'driver_1';
   final Set<String> _acceptedRuns = {};
 
@@ -109,7 +109,7 @@ class _DriverDashboardPageState extends State<DriverDashboardPage> {
                         style: TextStyle(color: Colors.grey[500], fontSize: 11),
                       ),
                       Text(
-                        '₦${NumberFormat('#,##0').format(driver.totalPayout)}',
+                        '\$${NumberFormat('#,##0.00').format(driver.totalPayout)}',
                         style: GoogleFonts.inter(
                           fontSize: 18,
                           fontWeight: FontWeight.w800,
@@ -214,7 +214,7 @@ class _DriverDashboardPageState extends State<DriverDashboardPage> {
                                   ),
                                 ),
                                 Text(
-                                  '₦${NumberFormat('#,##0').format(payoutPerRun)}',
+                                  '\$${NumberFormat('#,##0.00').format(payoutPerRun)}',
                                   style: GoogleFonts.inter(
                                     fontSize: 20,
                                     fontWeight: FontWeight.w800,
@@ -318,7 +318,7 @@ class _DriverDashboardPageState extends State<DriverDashboardPage> {
         ButtonSegment(
           value: TripStatus.inProgress,
           label: Text('In Progress', style: TextStyle(fontSize: 10)),
-          icon: Icon(Icons.directions_bus, size: 14),
+          icon: Icon(Icons.directions_car, size: 14),
         ),
         ButtonSegment(
           value: TripStatus.completed,

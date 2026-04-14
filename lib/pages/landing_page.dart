@@ -86,7 +86,7 @@ class _LandingPageState extends State<LandingPage> {
                     children: [
                       Row(
                         children: [
-                          const Icon(Icons.directions_bus, color: Colors.white, size: 36),
+                          const Icon(Icons.directions_car, color: Colors.white, size: 36),
                           const SizedBox(width: 12),
                           Text(
                             'RideShare',
@@ -118,7 +118,7 @@ class _LandingPageState extends State<LandingPage> {
                       ),
                       const SizedBox(height: 32),
                       Text(
-                        'Travel between\ncities with ease',
+                        'Share rides\nacross Texas',
                         style: GoogleFonts.inter(
                           fontSize: 36,
                           fontWeight: FontWeight.w800,
@@ -128,7 +128,7 @@ class _LandingPageState extends State<LandingPage> {
                       ),
                       const SizedBox(height: 12),
                       Text(
-                        'Book your seat in minutes. Fixed routes,\nguaranteed departures, affordable prices.',
+                        'Book a seat in minutes. Fixed routes,\nguaranteed departures, affordable prices.',
                         style: GoogleFonts.inter(
                           fontSize: 16,
                           color: Colors.white70,

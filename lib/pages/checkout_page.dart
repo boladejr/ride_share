@@ -131,7 +131,7 @@ class _CheckoutPageState extends State<CheckoutPage> {
                   ),
                   _summaryRow(
                     'Price per seat',
-                    '₦${NumberFormat('#,##0').format(widget.route.pricePerSeat)}',
+                    '\$${NumberFormat('#,##0.00').format(widget.route.pricePerSeat)}',
                   ),
                   const Divider(height: 24),
                   Row(
@@ -145,7 +145,7 @@ class _CheckoutPageState extends State<CheckoutPage> {
                         ),
                       ),
                       Text(
-                        '₦${NumberFormat('#,##0').format(_totalPrice)}',
+                        '\$${NumberFormat('#,##0.00').format(_totalPrice)}',
                         style: GoogleFonts.inter(
                           fontSize: 22,
                           fontWeight: FontWeight.w800,
@@ -306,7 +306,7 @@ class _CheckoutPageState extends State<CheckoutPage> {
                         ],
                       )
                     : Text(
-                        'Confirm & Pay ₦${NumberFormat('#,##0').format(_totalPrice)}',
+                        'Confirm & Pay \$${NumberFormat('#,##0.00').format(_totalPrice)}',
                       ),
               ),
             ),
