@@ -61,173 +61,182 @@ class _LandingPageState extends State<LandingPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Colors.white,
       body: SingleChildScrollView(
         child: Column(
           children: [
-            // Hero Section
-            Container(
-              width: double.infinity,
-              decoration: const BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [
-                    AppTheme.primaryDark,
-                    AppTheme.primaryColor,
-                    AppTheme.primaryLight,
+            // Top nav bar
+            SafeArea(
+              bottom: false,
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(24, 16, 24, 0),
+                child: Row(
+                  children: [
+                    Text(
+                      'RideShare',
+                      style: GoogleFonts.inter(
+                        fontSize: 22,
+                        fontWeight: FontWeight.w800,
+                        color: AppTheme.primaryDark,
+                      ),
+                    ),
+                    const Spacer(),
+                    _navButton(
+                      'Driver',
+                      Icons.drive_eta_outlined,
+                      () => Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (_) => const DriverDashboardPage()),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    _navButton(
+                      'Admin',
+                      Icons.settings_outlined,
+                      () => Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (_) => const AdminPanelPage()),
+                      ),
+                    ),
                   ],
-                ),
-              ),
-              child: SafeArea(
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(24, 40, 24, 48),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          const Icon(Icons.directions_car, color: Colors.white, size: 36),
-                          const SizedBox(width: 12),
-                          Text(
-                            'RideShare',
-                            style: GoogleFonts.inter(
-                              fontSize: 28,
-                              fontWeight: FontWeight.w800,
-                              color: Colors.white,
-                            ),
-                          ),
-                          const Spacer(),
-                          // Quick access buttons
-                          IconButton(
-                            icon: const Icon(Icons.drive_eta, color: Colors.white70),
-                            tooltip: 'Driver Dashboard',
-                            onPressed: () => Navigator.push(
-                              context,
-                              MaterialPageRoute(builder: (_) => const DriverDashboardPage()),
-                            ),
-                          ),
-                          IconButton(
-                            icon: const Icon(Icons.admin_panel_settings, color: Colors.white70),
-                            tooltip: 'Admin Panel',
-                            onPressed: () => Navigator.push(
-                              context,
-                              MaterialPageRoute(builder: (_) => const AdminPanelPage()),
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 32),
-                      Text(
-                        'Share rides\nacross Texas',
-                        style: GoogleFonts.inter(
-                          fontSize: 36,
-                          fontWeight: FontWeight.w800,
-                          color: Colors.white,
-                          height: 1.2,
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      Text(
-                        'Book a seat in minutes. Fixed routes,\nguaranteed departures, affordable prices.',
-                        style: GoogleFonts.inter(
-                          fontSize: 16,
-                          color: Colors.white70,
-                          height: 1.5,
-                        ),
-                      ),
-                    ],
-                  ),
                 ),
               ),
             ),
 
-            // Search Card
-            Transform.translate(
-              offset: const Offset(0, -24),
-              child: Container(
-                margin: const EdgeInsets.symmetric(horizontal: 16),
-                padding: const EdgeInsets.all(20),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(16),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.1),
-                      blurRadius: 20,
-                      offset: const Offset(0, 4),
-                    ),
-                  ],
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Find your route',
-                      style: GoogleFonts.inter(
-                        fontSize: 18,
-                        fontWeight: FontWeight.w700,
-                        color: AppTheme.primaryDark,
-                      ),
-                    ),
-                    const SizedBox(height: 16),
+            // Dotted separator
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 24),
+              child: _dottedLine(),
+            ),
 
-                    // Origin
-                    DropdownButtonFormField<String>(
-                      initialValue: _selectedOrigin,
-                      decoration: const InputDecoration(
-                        labelText: 'Origin',
-                        prefixIcon: Icon(Icons.trip_origin, color: AppTheme.primaryColor),
-                      ),
-                      items: _dataService.cities.map((city) {
-                        return DropdownMenuItem(value: city, child: Text(city));
-                      }).toList(),
-                      onChanged: (val) => setState(() => _selectedOrigin = val),
+            // Hero Section — centered, clean
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 32),
+              child: Column(
+                children: [
+                  Text(
+                    'Share Rides\nAcross Texas.',
+                    textAlign: TextAlign.center,
+                    style: GoogleFonts.inter(
+                      fontSize: 40,
+                      fontWeight: FontWeight.w800,
+                      color: AppTheme.primaryDark,
+                      height: 1.15,
                     ),
-                    const SizedBox(height: 12),
-
-                    // Destination
-                    DropdownButtonFormField<String>(
-                      initialValue: _selectedDestination,
-                      decoration: const InputDecoration(
-                        labelText: 'Destination',
-                        prefixIcon: Icon(Icons.location_on, color: AppTheme.errorColor),
-                      ),
-                      items: _dataService.cities.map((city) {
-                        return DropdownMenuItem(value: city, child: Text(city));
-                      }).toList(),
-                      onChanged: (val) => setState(() => _selectedDestination = val),
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    'Book a seat in minutes — fixed routes,\nguaranteed departures, affordable prices.',
+                    textAlign: TextAlign.center,
+                    style: GoogleFonts.inter(
+                      fontSize: 16,
+                      color: AppTheme.textSecondary,
+                      height: 1.6,
                     ),
-                    const SizedBox(height: 12),
-
-                    // Date
-                    InkWell(
-                      onTap: _pickDate,
-                      child: InputDecorator(
-                        decoration: const InputDecoration(
-                          labelText: 'Date',
-                          prefixIcon: Icon(Icons.calendar_today, color: AppTheme.primaryColor),
-                        ),
-                        child: Text(
-                          DateFormat('EEE, MMM d, yyyy').format(_selectedDate),
-                          style: const TextStyle(fontSize: 16),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 20),
-
-                    // Search button
-                    SizedBox(
-                      width: double.infinity,
-                      height: 52,
-                      child: ElevatedButton.icon(
-                        onPressed: _search,
-                        icon: const Icon(Icons.search),
-                        label: const Text('Search Routes'),
-                      ),
-                    ),
-                  ],
-                ),
+                  ),
+                ],
               ),
+            ),
+
+            const SizedBox(height: 32),
+
+            // Search Card — clean, bordered
+            Container(
+              margin: const EdgeInsets.symmetric(horizontal: 24),
+              padding: const EdgeInsets.all(24),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(color: AppTheme.borderColor),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Find your route',
+                    style: GoogleFonts.inter(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w700,
+                      color: AppTheme.primaryDark,
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+
+                  // Origin
+                  DropdownButtonFormField<String>(
+                    initialValue: _selectedOrigin,
+                    decoration: InputDecoration(
+                      labelText: 'Origin',
+                      prefixIcon: Icon(Icons.circle_outlined, color: AppTheme.primaryColor, size: 18),
+                      filled: true,
+                      fillColor: AppTheme.surfaceColor,
+                    ),
+                    items: _dataService.cities.map((city) {
+                      return DropdownMenuItem(value: city, child: Text(city));
+                    }).toList(),
+                    onChanged: (val) => setState(() => _selectedOrigin = val),
+                  ),
+                  const SizedBox(height: 14),
+
+                  // Destination
+                  DropdownButtonFormField<String>(
+                    initialValue: _selectedDestination,
+                    decoration: InputDecoration(
+                      labelText: 'Destination',
+                      prefixIcon: Icon(Icons.location_on_outlined, color: AppTheme.primaryColor, size: 18),
+                      filled: true,
+                      fillColor: AppTheme.surfaceColor,
+                    ),
+                    items: _dataService.cities.map((city) {
+                      return DropdownMenuItem(value: city, child: Text(city));
+                    }).toList(),
+                    onChanged: (val) => setState(() => _selectedDestination = val),
+                  ),
+                  const SizedBox(height: 14),
+
+                  // Date
+                  InkWell(
+                    onTap: _pickDate,
+                    borderRadius: BorderRadius.circular(12),
+                    child: InputDecorator(
+                      decoration: InputDecoration(
+                        labelText: 'Date',
+                        prefixIcon: Icon(Icons.calendar_today_outlined, color: AppTheme.primaryColor, size: 18),
+                        filled: true,
+                        fillColor: AppTheme.surfaceColor,
+                      ),
+                      child: Text(
+                        DateFormat('EEE, MMM d, yyyy').format(_selectedDate),
+                        style: GoogleFonts.inter(fontSize: 15),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+
+                  // Search button
+                  SizedBox(
+                    width: double.infinity,
+                    height: 52,
+                    child: ElevatedButton(
+                      onPressed: _search,
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const Text('Search Routes'),
+                          const SizedBox(width: 8),
+                          const Icon(Icons.arrow_forward, size: 18),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            // Dotted separator
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 32),
+              child: _dottedLine(),
             ),
 
             // Features section
@@ -243,99 +252,164 @@ class _LandingPageState extends State<LandingPage> {
                       color: AppTheme.primaryDark,
                     ),
                   ),
-                  const SizedBox(height: 20),
-                  _buildFeatureCard(
-                    Icons.schedule,
-                    'Fixed Schedules',
-                    'Guaranteed departure times. No waiting around.',
-                  ),
-                  _buildFeatureCard(
-                    Icons.event_seat,
-                    'Reserve Your Seat',
-                    'Pick your exact seat. No scrambling for spots.',
-                  ),
-                  _buildFeatureCard(
-                    Icons.location_on,
-                    'Live Tracking',
-                    'Know exactly where your ride is in real time.',
-                  ),
-                  _buildFeatureCard(
-                    Icons.payments,
-                    'Transparent Pricing',
-                    'Pay per seat. No hidden fees or surge pricing.',
-                  ),
                   const SizedBox(height: 24),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _buildFeatureCard(
+                          Icons.schedule_outlined,
+                          'Fixed Schedules',
+                          'Guaranteed departures.',
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: _buildFeatureCard(
+                          Icons.event_seat_outlined,
+                          'Reserve Seats',
+                          'Pick your exact seat.',
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _buildFeatureCard(
+                          Icons.location_on_outlined,
+                          'Live Tracking',
+                          'Real-time ride location.',
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: _buildFeatureCard(
+                          Icons.payments_outlined,
+                          'Transparent',
+                          'No hidden fees.',
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 40),
                 ],
               ),
             ),
           ],
         ),
       ),
-      bottomNavigationBar: BottomNavigationBar(
-        currentIndex: _currentNavIndex,
-        onTap: (index) {
-          setState(() => _currentNavIndex = index);
-          if (index == 1) {
-            // My Trips - show bookings
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Book a trip to see it here!')),
-            );
-          }
-        },
-        items: const [
-          BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
-          BottomNavigationBarItem(icon: Icon(Icons.receipt_long), label: 'My Trips'),
-          BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Profile'),
-        ],
+      bottomNavigationBar: Container(
+        decoration: const BoxDecoration(
+          border: Border(top: BorderSide(color: AppTheme.borderColor)),
+        ),
+        child: BottomNavigationBar(
+          currentIndex: _currentNavIndex,
+          onTap: (index) {
+            setState(() => _currentNavIndex = index);
+            if (index == 1) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Book a trip to see it here!')),
+              );
+            }
+          },
+          items: const [
+            BottomNavigationBarItem(icon: Icon(Icons.home_outlined), activeIcon: Icon(Icons.home), label: 'Home'),
+            BottomNavigationBarItem(icon: Icon(Icons.receipt_long_outlined), activeIcon: Icon(Icons.receipt_long), label: 'My Trips'),
+            BottomNavigationBarItem(icon: Icon(Icons.person_outline), activeIcon: Icon(Icons.person), label: 'Profile'),
+          ],
+        ),
       ),
     );
   }
 
-  Widget _buildFeatureCard(IconData icon, String title, String subtitle) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
+  Widget _navButton(String label, IconData icon, VoidCallback onTap) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(10),
       child: Container(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
         decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: Colors.grey.shade200),
+          border: Border.all(color: AppTheme.borderColor),
+          borderRadius: BorderRadius.circular(10),
         ),
         child: Row(
+          mainAxisSize: MainAxisSize.min,
           children: [
-            Container(
-              padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(
-                color: AppTheme.primaryColor.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: Icon(icon, color: AppTheme.primaryColor, size: 28),
-            ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    title,
-                    style: GoogleFonts.inter(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    subtitle,
-                    style: GoogleFonts.inter(
-                      fontSize: 13,
-                      color: Colors.grey[600],
-                    ),
-                  ),
-                ],
+            Icon(icon, size: 16, color: AppTheme.textSecondary),
+            const SizedBox(width: 6),
+            Text(
+              label,
+              style: GoogleFonts.inter(
+                fontSize: 13,
+                fontWeight: FontWeight.w500,
+                color: AppTheme.textSecondary,
               ),
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _dottedLine() {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final dotCount = (constraints.maxWidth / 8).floor();
+        return Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: List.generate(dotCount, (index) {
+            return Container(
+              width: 3,
+              height: 3,
+              margin: const EdgeInsets.symmetric(horizontal: 2),
+              decoration: BoxDecoration(
+                color: AppTheme.borderColor,
+                shape: BoxShape.circle,
+              ),
+            );
+          }),
+        );
+      },
+    );
+  }
+
+  Widget _buildFeatureCard(IconData icon, String title, String subtitle) {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: AppTheme.surfaceColor,
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: AppTheme.primaryColor.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Icon(icon, color: AppTheme.primaryColor, size: 22),
+          ),
+          const SizedBox(height: 14),
+          Text(
+            title,
+            style: GoogleFonts.inter(
+              fontSize: 14,
+              fontWeight: FontWeight.w700,
+              color: AppTheme.primaryDark,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            subtitle,
+            style: GoogleFonts.inter(
+              fontSize: 13,
+              color: AppTheme.textSecondary,
+            ),
+          ),
+        ],
       ),
     );
   }

@@ -85,60 +85,66 @@ class _TripConfirmationPageState extends State<TripConfirmationPage> {
     final booking = _booking!;
 
     return Scaffold(
+      backgroundColor: Colors.white,
       appBar: AppBar(
         title: const Text('Trip Confirmed'),
         leading: IconButton(
-          icon: const Icon(Icons.home),
+          icon: const Icon(Icons.home_outlined),
           onPressed: () => Navigator.popUntil(context, (route) => route.isFirst),
         ),
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(20),
         child: Column(
           children: [
-            // Success banner
+            // Success banner — minimalist
             Container(
               width: double.infinity,
-              padding: const EdgeInsets.all(24),
+              padding: const EdgeInsets.symmetric(vertical: 32, horizontal: 24),
               decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  colors: [AppTheme.primaryColor, AppTheme.primaryLight],
-                ),
-                borderRadius: BorderRadius.circular(16),
+                color: AppTheme.surfaceColor,
+                borderRadius: BorderRadius.circular(20),
               ),
               child: Column(
                 children: [
-                  const Icon(Icons.check_circle, color: Colors.white, size: 56),
-                  const SizedBox(height: 12),
+                  Container(
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                      color: AppTheme.primaryColor.withValues(alpha: 0.1),
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(Icons.check, color: AppTheme.primaryColor, size: 32),
+                  ),
+                  const SizedBox(height: 16),
                   Text(
                     'Booking Confirmed!',
                     style: GoogleFonts.inter(
                       fontSize: 22,
                       fontWeight: FontWeight.w800,
-                      color: Colors.white,
+                      color: AppTheme.primaryDark,
                     ),
                   ),
-                  const SizedBox(height: 4),
+                  const SizedBox(height: 6),
                   Text(
                     'Your seat${booking.seatNumbers.length > 1 ? 's are' : ' is'} reserved',
-                    style: const TextStyle(color: Colors.white70, fontSize: 14),
+                    style: GoogleFonts.inter(
+                      color: AppTheme.textSecondary,
+                      fontSize: 14,
+                    ),
                   ),
                 ],
               ),
             ),
 
-            const SizedBox(height: 20),
+            const SizedBox(height: 16),
 
             // Trip Status Badge
             Container(
               width: double.infinity,
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
               decoration: BoxDecoration(
-                color: _statusColor(booking.tripStatus).withValues(alpha: 0.1),
+                color: _statusColor(booking.tripStatus).withValues(alpha: 0.08),
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(
-                  color: _statusColor(booking.tripStatus).withValues(alpha: 0.3),
-                ),
               ),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
@@ -146,13 +152,14 @@ class _TripConfirmationPageState extends State<TripConfirmationPage> {
                   Icon(
                     _statusIcon(booking.tripStatus),
                     color: _statusColor(booking.tripStatus),
+                    size: 20,
                   ),
                   const SizedBox(width: 8),
                   Text(
-                    'Trip Status: ${_statusText(booking.tripStatus)}',
+                    _statusText(booking.tripStatus),
                     style: GoogleFonts.inter(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w700,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
                       color: _statusColor(booking.tripStatus),
                     ),
                   ),
@@ -160,7 +167,7 @@ class _TripConfirmationPageState extends State<TripConfirmationPage> {
               ),
             ),
 
-            const SizedBox(height: 20),
+            const SizedBox(height: 16),
 
             // Booking Details
             Container(
@@ -169,12 +176,7 @@ class _TripConfirmationPageState extends State<TripConfirmationPage> {
               decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(16),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.06),
-                    blurRadius: 12,
-                  ),
-                ],
+                border: Border.all(color: AppTheme.borderColor),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -182,34 +184,30 @@ class _TripConfirmationPageState extends State<TripConfirmationPage> {
                   Text(
                     'Booking Details',
                     style: GoogleFonts.inter(
-                      fontSize: 18,
+                      fontSize: 16,
                       fontWeight: FontWeight.w700,
+                      color: AppTheme.primaryDark,
                     ),
                   ),
-                  const Divider(height: 24),
-                  _detailRow(Icons.confirmation_number, 'Booking ID', booking.id),
+                  const SizedBox(height: 16),
+                  _detailRow('Booking ID', booking.id),
                   _detailRow(
-                    Icons.route,
                     'Route',
                     '${booking.origin} → ${booking.destination}',
                   ),
                   _detailRow(
-                    Icons.calendar_today,
                     'Date',
                     DateFormat('EEE, MMM d, yyyy').format(booking.departureTime),
                   ),
                   _detailRow(
-                    Icons.schedule,
                     'Departure',
                     DateFormat('hh:mm a').format(booking.departureTime),
                   ),
                   _detailRow(
-                    Icons.event_seat,
                     'Seats',
                     booking.seatNumbers.join(', '),
                   ),
                   _detailRow(
-                    Icons.payments,
                     'Total Paid',
                     '\$${NumberFormat('#,##0.00').format(booking.totalPrice)}',
                   ),
@@ -217,7 +215,7 @@ class _TripConfirmationPageState extends State<TripConfirmationPage> {
               ),
             ),
 
-            const SizedBox(height: 20),
+            const SizedBox(height: 16),
 
             // Pickup Point
             Container(
@@ -226,12 +224,7 @@ class _TripConfirmationPageState extends State<TripConfirmationPage> {
               decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(16),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.06),
-                    blurRadius: 12,
-                  ),
-                ],
+                border: Border.all(color: AppTheme.borderColor),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -239,23 +232,24 @@ class _TripConfirmationPageState extends State<TripConfirmationPage> {
                   Text(
                     'Pickup Point',
                     style: GoogleFonts.inter(
-                      fontSize: 18,
+                      fontSize: 16,
                       fontWeight: FontWeight.w700,
+                      color: AppTheme.primaryDark,
                     ),
                   ),
                   const SizedBox(height: 12),
                   Row(
                     children: [
                       Container(
-                        padding: const EdgeInsets.all(10),
+                        padding: const EdgeInsets.all(8),
                         decoration: BoxDecoration(
-                          color: AppTheme.errorColor.withValues(alpha: 0.1),
+                          color: AppTheme.primaryColor.withValues(alpha: 0.08),
                           borderRadius: BorderRadius.circular(10),
                         ),
-                        child: const Icon(
-                          Icons.location_on,
-                          color: AppTheme.errorColor,
-                          size: 24,
+                        child: Icon(
+                          Icons.location_on_outlined,
+                          color: AppTheme.primaryColor,
+                          size: 20,
                         ),
                       ),
                       const SizedBox(width: 12),
@@ -263,8 +257,9 @@ class _TripConfirmationPageState extends State<TripConfirmationPage> {
                         child: Text(
                           booking.pickupPoint,
                           style: GoogleFonts.inter(
-                            fontSize: 15,
+                            fontSize: 14,
                             fontWeight: FontWeight.w500,
+                            color: AppTheme.primaryDark,
                           ),
                         ),
                       ),
@@ -274,32 +269,22 @@ class _TripConfirmationPageState extends State<TripConfirmationPage> {
                   // Map placeholder
                   Container(
                     width: double.infinity,
-                    height: 200,
+                    height: 180,
                     decoration: BoxDecoration(
-                      color: Colors.grey[200],
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: Colors.grey[300]!),
+                      color: AppTheme.surfaceColor,
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(color: AppTheme.borderColor),
                     ),
                     child: Stack(
                       alignment: Alignment.center,
                       children: [
                         // Simulated map background
                         ClipRRect(
-                          borderRadius: BorderRadius.circular(12),
+                          borderRadius: BorderRadius.circular(14),
                           child: Container(
-                            decoration: BoxDecoration(
-                              gradient: LinearGradient(
-                                begin: Alignment.topLeft,
-                                end: Alignment.bottomRight,
-                                colors: [
-                                  Colors.green[100]!,
-                                  Colors.green[50]!,
-                                  Colors.blue[50]!,
-                                ],
-                              ),
-                            ),
+                            color: AppTheme.surfaceColor,
                             child: CustomPaint(
-                              size: const Size(double.infinity, 200),
+                              size: const Size(double.infinity, 180),
                               painter: _MapGridPainter(),
                             ),
                           ),
@@ -309,32 +294,26 @@ class _TripConfirmationPageState extends State<TripConfirmationPage> {
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
                             Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 8,
-                                vertical: 4,
-                              ),
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                               decoration: BoxDecoration(
                                 color: Colors.white,
-                                borderRadius: BorderRadius.circular(6),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: Colors.black.withValues(alpha: 0.15),
-                                    blurRadius: 4,
-                                  ),
-                                ],
+                                borderRadius: BorderRadius.circular(8),
+                                border: Border.all(color: AppTheme.borderColor),
                               ),
                               child: Text(
                                 'Pickup Here',
                                 style: GoogleFonts.inter(
                                   fontSize: 11,
                                   fontWeight: FontWeight.w600,
+                                  color: AppTheme.primaryDark,
                                 ),
                               ),
                             ),
-                            const Icon(
+                            const SizedBox(height: 4),
+                            Icon(
                               Icons.location_on,
-                              color: AppTheme.errorColor,
-                              size: 40,
+                              color: AppTheme.primaryColor,
+                              size: 36,
                             ),
                           ],
                         ),
@@ -346,40 +325,32 @@ class _TripConfirmationPageState extends State<TripConfirmationPage> {
                             child: Container(
                               padding: const EdgeInsets.all(6),
                               decoration: BoxDecoration(
-                                color: AppTheme.seatSelected,
+                                color: AppTheme.primaryDark,
                                 shape: BoxShape.circle,
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: AppTheme.seatSelected.withValues(alpha: 0.4),
-                                    blurRadius: 8,
-                                  ),
-                                ],
                               ),
                               child: const Icon(
                                 Icons.directions_car,
                                 color: Colors.white,
-                                size: 16,
+                                size: 14,
                               ),
                             ),
                           ),
-                        // Google Maps badge
+                        // Maps badge
                         Positioned(
                           bottom: 8,
                           right: 8,
                           child: Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 8,
-                              vertical: 4,
-                            ),
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                             decoration: BoxDecoration(
                               color: Colors.white,
-                              borderRadius: BorderRadius.circular(4),
+                              borderRadius: BorderRadius.circular(6),
+                              border: Border.all(color: AppTheme.borderColor),
                             ),
                             child: Text(
                               'Google Maps',
-                              style: TextStyle(
+                              style: GoogleFonts.inter(
                                 fontSize: 10,
-                                color: Colors.grey[600],
+                                color: AppTheme.textTertiary,
                               ),
                             ),
                           ),
@@ -390,12 +361,11 @@ class _TripConfirmationPageState extends State<TripConfirmationPage> {
                   const SizedBox(height: 8),
                   Text(
                     booking.tripStatus == TripStatus.inProgress
-                        ? '🟢 Driver location updating in real time'
+                        ? 'Driver location updating in real time'
                         : 'Map will show live driver location when trip starts',
-                    style: TextStyle(
-                      color: Colors.grey[500],
+                    style: GoogleFonts.inter(
+                      color: AppTheme.textTertiary,
                       fontSize: 12,
-                      fontStyle: FontStyle.italic,
                     ),
                   ),
                 ],
@@ -407,15 +377,17 @@ class _TripConfirmationPageState extends State<TripConfirmationPage> {
             // Back to home
             SizedBox(
               width: double.infinity,
-              child: OutlinedButton.icon(
+              height: 52,
+              child: OutlinedButton(
                 onPressed: () =>
                     Navigator.popUntil(context, (route) => route.isFirst),
-                icon: const Icon(Icons.home),
-                label: const Text('Back to Home'),
-                style: OutlinedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 14),
-                  side: const BorderSide(color: AppTheme.primaryColor),
-                  foregroundColor: AppTheme.primaryColor,
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Icon(Icons.home_outlined, size: 18),
+                    const SizedBox(width: 8),
+                    const Text('Back to Home'),
+                  ],
                 ),
               ),
             ),
@@ -426,18 +398,20 @@ class _TripConfirmationPageState extends State<TripConfirmationPage> {
     );
   }
 
-  Widget _detailRow(IconData icon, String label, String value) {
+  Widget _detailRow(String label, String value) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.only(bottom: 10),
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(icon, size: 20, color: AppTheme.primaryColor),
-          const SizedBox(width: 12),
           SizedBox(
             width: 90,
             child: Text(
               label,
-              style: TextStyle(color: Colors.grey[600], fontSize: 13),
+              style: GoogleFonts.inter(
+                color: AppTheme.textTertiary,
+                fontSize: 13,
+              ),
             ),
           ),
           Expanded(
@@ -445,7 +419,8 @@ class _TripConfirmationPageState extends State<TripConfirmationPage> {
               value,
               style: GoogleFonts.inter(
                 fontSize: 14,
-                fontWeight: FontWeight.w600,
+                fontWeight: FontWeight.w500,
+                color: AppTheme.primaryDark,
               ),
             ),
           ),

@@ -78,11 +78,12 @@ class _CheckoutPageState extends State<CheckoutPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Colors.white,
       appBar: AppBar(
         title: const Text('Checkout'),
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(20),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -93,13 +94,7 @@ class _CheckoutPageState extends State<CheckoutPage> {
               decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(16),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.06),
-                    blurRadius: 12,
-                    offset: const Offset(0, 2),
-                  ),
-                ],
+                border: Border.all(color: AppTheme.borderColor),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -107,11 +102,12 @@ class _CheckoutPageState extends State<CheckoutPage> {
                   Text(
                     'Order Summary',
                     style: GoogleFonts.inter(
-                      fontSize: 18,
+                      fontSize: 16,
                       fontWeight: FontWeight.w700,
+                      color: AppTheme.primaryDark,
                     ),
                   ),
-                  const Divider(height: 24),
+                  const SizedBox(height: 16),
                   _summaryRow(
                     'Route',
                     '${widget.route.origin} → ${widget.route.destination}',
@@ -133,23 +129,27 @@ class _CheckoutPageState extends State<CheckoutPage> {
                     'Price per seat',
                     '\$${NumberFormat('#,##0.00').format(widget.route.pricePerSeat)}',
                   ),
-                  const Divider(height: 24),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    child: Divider(height: 1, color: AppTheme.borderColor),
+                  ),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Text(
                         'Total (${widget.selectedSeats.length} seat${widget.selectedSeats.length != 1 ? 's' : ''})',
                         style: GoogleFonts.inter(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w700,
+                          fontSize: 15,
+                          fontWeight: FontWeight.w600,
+                          color: AppTheme.textSecondary,
                         ),
                       ),
                       Text(
                         '\$${NumberFormat('#,##0.00').format(_totalPrice)}',
                         style: GoogleFonts.inter(
-                          fontSize: 22,
+                          fontSize: 24,
                           fontWeight: FontWeight.w800,
-                          color: AppTheme.primaryColor,
+                          color: AppTheme.primaryDark,
                         ),
                       ),
                     ],
@@ -158,7 +158,7 @@ class _CheckoutPageState extends State<CheckoutPage> {
               ),
             ),
 
-            const SizedBox(height: 24),
+            const SizedBox(height: 20),
 
             // Payment Section
             Container(
@@ -167,13 +167,7 @@ class _CheckoutPageState extends State<CheckoutPage> {
               decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(16),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.06),
-                    blurRadius: 12,
-                    offset: const Offset(0, 2),
-                  ),
-                ],
+                border: Border.all(color: AppTheme.borderColor),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -183,35 +177,29 @@ class _CheckoutPageState extends State<CheckoutPage> {
                       Text(
                         'Payment Details',
                         style: GoogleFonts.inter(
-                          fontSize: 18,
+                          fontSize: 16,
                           fontWeight: FontWeight.w700,
+                          color: AppTheme.primaryDark,
                         ),
                       ),
                       const Spacer(),
                       Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 10,
-                          vertical: 4,
-                        ),
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                         decoration: BoxDecoration(
-                          color: const Color(0xFF635BFF).withValues(alpha: 0.1),
-                          borderRadius: BorderRadius.circular(6),
+                          color: AppTheme.primaryColor.withValues(alpha: 0.08),
+                          borderRadius: BorderRadius.circular(8),
                         ),
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            const Icon(
-                              Icons.lock,
-                              size: 14,
-                              color: Color(0xFF635BFF),
-                            ),
+                            Icon(Icons.lock_outline, size: 13, color: AppTheme.primaryColor),
                             const SizedBox(width: 4),
                             Text(
                               'Stripe',
                               style: GoogleFonts.inter(
                                 fontSize: 12,
                                 fontWeight: FontWeight.w600,
-                                color: const Color(0xFF635BFF),
+                                color: AppTheme.primaryColor,
                               ),
                             ),
                           ],
@@ -219,7 +207,7 @@ class _CheckoutPageState extends State<CheckoutPage> {
                       ),
                     ],
                   ),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 20),
 
                   // Cardholder Name
                   TextField(
@@ -230,20 +218,20 @@ class _CheckoutPageState extends State<CheckoutPage> {
                     ),
                     textCapitalization: TextCapitalization.words,
                   ),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 14),
 
                   // Card Number
                   TextField(
                     controller: _cardNumberController,
                     decoration: const InputDecoration(
                       labelText: 'Card Number',
-                      prefixIcon: Icon(Icons.credit_card),
+                      prefixIcon: Icon(Icons.credit_card_outlined),
                       hintText: '4242 4242 4242 4242',
                     ),
                     keyboardType: TextInputType.number,
                     maxLength: 19,
                   ),
-                  const SizedBox(height: 4),
+                  const SizedBox(height: 6),
 
                   // Expiry and CVV
                   Row(
@@ -253,7 +241,7 @@ class _CheckoutPageState extends State<CheckoutPage> {
                           controller: _expiryController,
                           decoration: const InputDecoration(
                             labelText: 'MM/YY',
-                            prefixIcon: Icon(Icons.date_range),
+                            prefixIcon: Icon(Icons.date_range_outlined),
                           ),
                           keyboardType: TextInputType.number,
                           maxLength: 5,
@@ -265,7 +253,7 @@ class _CheckoutPageState extends State<CheckoutPage> {
                           controller: _cvvController,
                           decoration: const InputDecoration(
                             labelText: 'CVV',
-                            prefixIcon: Icon(Icons.security),
+                            prefixIcon: Icon(Icons.security_outlined),
                           ),
                           keyboardType: TextInputType.number,
                           maxLength: 4,
@@ -283,30 +271,34 @@ class _CheckoutPageState extends State<CheckoutPage> {
             // Confirm button
             SizedBox(
               width: double.infinity,
-              height: 56,
+              height: 52,
               child: ElevatedButton(
                 onPressed: _processing ? null : _confirmAndPay,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF635BFF),
-                ),
                 child: _processing
                     ? const Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           SizedBox(
-                            width: 20,
-                            height: 20,
+                            width: 18,
+                            height: 18,
                             child: CircularProgressIndicator(
                               strokeWidth: 2,
                               color: Colors.white,
                             ),
                           ),
                           SizedBox(width: 12),
-                          Text('Processing Payment...'),
+                          Text('Processing...'),
                         ],
                       )
-                    : Text(
-                        'Confirm & Pay \$${NumberFormat('#,##0.00').format(_totalPrice)}',
+                    : Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Text(
+                            'Confirm & Pay \$${NumberFormat('#,##0.00').format(_totalPrice)}',
+                          ),
+                          const SizedBox(width: 8),
+                          const Icon(Icons.arrow_forward, size: 16),
+                        ],
                       ),
               ),
             ),
@@ -315,7 +307,10 @@ class _CheckoutPageState extends State<CheckoutPage> {
             Center(
               child: Text(
                 'Your payment is secured by Stripe',
-                style: TextStyle(color: Colors.grey[500], fontSize: 12),
+                style: GoogleFonts.inter(
+                  color: AppTheme.textTertiary,
+                  fontSize: 12,
+                ),
               ),
             ),
             const SizedBox(height: 24),
@@ -332,12 +327,12 @@ class _CheckoutPageState extends State<CheckoutPage> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           SizedBox(
-            width: 120,
+            width: 110,
             child: Text(
               label,
-              style: TextStyle(
-                color: Colors.grey[600],
-                fontSize: 14,
+              style: GoogleFonts.inter(
+                color: AppTheme.textTertiary,
+                fontSize: 13,
               ),
             ),
           ),
@@ -347,6 +342,7 @@ class _CheckoutPageState extends State<CheckoutPage> {
               style: GoogleFonts.inter(
                 fontSize: 14,
                 fontWeight: FontWeight.w500,
+                color: AppTheme.primaryDark,
               ),
             ),
           ),

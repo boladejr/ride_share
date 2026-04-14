@@ -33,28 +33,29 @@ class _AdminPanelPageState extends State<AdminPanelPage>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Colors.white,
       appBar: AppBar(
         title: const Text('Admin Panel'),
         actions: [
           Container(
-            margin: const EdgeInsets.only(right: 12),
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+            margin: const EdgeInsets.only(right: 16),
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
             decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.2),
+              color: AppTheme.primaryColor.withValues(alpha: 0.08),
               borderRadius: BorderRadius.circular(8),
             ),
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const Icon(Icons.admin_panel_settings,
-                    size: 16, color: Colors.white),
+                Icon(Icons.admin_panel_settings_outlined,
+                    size: 14, color: AppTheme.primaryColor),
                 const SizedBox(width: 4),
                 Text(
                   'Admin',
                   style: GoogleFonts.inter(
                     fontSize: 12,
                     fontWeight: FontWeight.w600,
-                    color: Colors.white,
+                    color: AppTheme.primaryColor,
                   ),
                 ),
               ],
@@ -63,15 +64,11 @@ class _AdminPanelPageState extends State<AdminPanelPage>
         ],
         bottom: TabBar(
           controller: _tabController,
-          labelColor: Colors.white,
-          unselectedLabelColor: Colors.white60,
-          indicatorColor: AppTheme.accentColor,
-          indicatorWeight: 3,
           tabs: const [
-            Tab(icon: Icon(Icons.route, size: 18), text: 'Routes'),
-            Tab(icon: Icon(Icons.book, size: 18), text: 'Bookings'),
-            Tab(icon: Icon(Icons.drive_eta, size: 18), text: 'Drivers'),
-            Tab(icon: Icon(Icons.attach_money, size: 18), text: 'Pricing'),
+            Tab(icon: Icon(Icons.route_outlined, size: 16), text: 'Routes'),
+            Tab(icon: Icon(Icons.book_outlined, size: 16), text: 'Bookings'),
+            Tab(icon: Icon(Icons.drive_eta_outlined, size: 16), text: 'Drivers'),
+            Tab(icon: Icon(Icons.attach_money, size: 16), text: 'Pricing'),
           ],
         ),
       ),
@@ -93,47 +90,72 @@ class _AdminPanelPageState extends State<AdminPanelPage>
     return Column(
       children: [
         Padding(
-          padding: const EdgeInsets.all(12),
+          padding: const EdgeInsets.all(16),
           child: SizedBox(
             width: double.infinity,
-            child: ElevatedButton.icon(
+            child: ElevatedButton(
               onPressed: () => _showAddRouteDialog(),
-              icon: const Icon(Icons.add),
-              label: const Text('Add New Route'),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(Icons.add, size: 18),
+                  const SizedBox(width: 8),
+                  const Text('Add New Route'),
+                ],
+              ),
             ),
           ),
         ),
         Expanded(
           child: ListView.builder(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
             itemCount: routes.length,
             itemBuilder: (context, index) {
               final route = routes[index];
-              return Card(
-                margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                child: ListTile(
-                  title: Text(
-                    '${route.origin} → ${route.destination}',
-                    style: GoogleFonts.inter(fontWeight: FontWeight.w600),
-                  ),
-                  subtitle: Text(
-                    '${DateFormat('EEE, MMM d • hh:mm a').format(route.departureTime)} • '
-                    '${route.totalSeats} seats • '
-                    '\$${NumberFormat('#,##0.00').format(route.pricePerSeat)}/seat',
-                    style: const TextStyle(fontSize: 12),
-                  ),
-                  trailing: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      IconButton(
-                        icon: const Icon(Icons.edit, size: 20),
-                        onPressed: () => _showEditRouteDialog(route),
+              return Container(
+                margin: const EdgeInsets.only(bottom: 8),
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: AppTheme.borderColor),
+                ),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            '${route.origin} → ${route.destination}',
+                            style: GoogleFonts.inter(
+                              fontWeight: FontWeight.w600,
+                              fontSize: 14,
+                              color: AppTheme.primaryDark,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            '${DateFormat('EEE, MMM d • hh:mm a').format(route.departureTime)} • '
+                            '${route.totalSeats} seats • '
+                            '\$${NumberFormat('#,##0.00').format(route.pricePerSeat)}/seat',
+                            style: GoogleFonts.inter(
+                              fontSize: 12,
+                              color: AppTheme.textSecondary,
+                            ),
+                          ),
+                        ],
                       ),
-                      IconButton(
-                        icon: const Icon(Icons.delete, size: 20, color: Colors.red),
-                        onPressed: () => _confirmDeleteRoute(route),
-                      ),
-                    ],
-                  ),
+                    ),
+                    IconButton(
+                      icon: Icon(Icons.edit_outlined, size: 18, color: AppTheme.textSecondary),
+                      onPressed: () => _showEditRouteDialog(route),
+                    ),
+                    IconButton(
+                      icon: Icon(Icons.delete_outline, size: 18, color: AppTheme.errorColor),
+                      onPressed: () => _confirmDeleteRoute(route),
+                    ),
+                  ],
                 ),
               );
             },
@@ -425,13 +447,17 @@ class _AdminPanelPageState extends State<AdminPanelPage>
             width: 60,
             child: Text(
               label,
-              style: TextStyle(color: Colors.grey[600], fontSize: 12),
+              style: GoogleFonts.inter(color: AppTheme.textTertiary, fontSize: 12),
             ),
           ),
           Expanded(
             child: Text(
               value,
-              style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500),
+              style: GoogleFonts.inter(
+                fontSize: 13,
+                fontWeight: FontWeight.w500,
+                color: AppTheme.primaryDark,
+              ),
             ),
           ),
         ],
@@ -459,12 +485,12 @@ class _AdminPanelPageState extends State<AdminPanelPage>
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
       decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.1),
+        color: color.withValues(alpha: 0.08),
         borderRadius: BorderRadius.circular(6),
       ),
       child: Text(
         text,
-        style: TextStyle(color: color, fontSize: 11, fontWeight: FontWeight.w600),
+        style: GoogleFonts.inter(color: color, fontSize: 11, fontWeight: FontWeight.w600),
       ),
     );
   }

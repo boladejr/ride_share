@@ -31,27 +31,28 @@ class _DriverDashboardPageState extends State<DriverDashboardPage> {
     }
 
     return Scaffold(
+      backgroundColor: Colors.white,
       appBar: AppBar(
         title: const Text('Driver Dashboard'),
         actions: [
           Container(
-            margin: const EdgeInsets.only(right: 12),
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+            margin: const EdgeInsets.only(right: 16),
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
             decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.2),
+              color: AppTheme.primaryColor.withValues(alpha: 0.08),
               borderRadius: BorderRadius.circular(8),
             ),
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const Icon(Icons.verified_user, size: 16, color: Colors.white),
+                Icon(Icons.verified_outlined, size: 14, color: AppTheme.primaryColor),
                 const SizedBox(width: 4),
                 Text(
                   'Driver',
                   style: GoogleFonts.inter(
                     fontSize: 12,
                     fontWeight: FontWeight.w600,
-                    color: Colors.white,
+                    color: AppTheme.primaryColor,
                   ),
                 ),
               ],
@@ -66,23 +67,27 @@ class _DriverDashboardPageState extends State<DriverDashboardPage> {
             // Driver info header
             Container(
               width: double.infinity,
+              margin: const EdgeInsets.fromLTRB(20, 0, 20, 0),
               padding: const EdgeInsets.all(20),
-              color: AppTheme.primaryColor.withValues(alpha: 0.05),
+              decoration: BoxDecoration(
+                color: AppTheme.surfaceColor,
+                borderRadius: BorderRadius.circular(16),
+              ),
               child: Row(
                 children: [
                   CircleAvatar(
-                    radius: 28,
+                    radius: 24,
                     backgroundColor: AppTheme.primaryColor,
                     child: Text(
                       driver.name[0],
                       style: GoogleFonts.inter(
-                        fontSize: 24,
+                        fontSize: 20,
                         fontWeight: FontWeight.w700,
                         color: Colors.white,
                       ),
                     ),
                   ),
-                  const SizedBox(width: 16),
+                  const SizedBox(width: 14),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -90,13 +95,18 @@ class _DriverDashboardPageState extends State<DriverDashboardPage> {
                         Text(
                           driver.name,
                           style: GoogleFonts.inter(
-                            fontSize: 18,
+                            fontSize: 16,
                             fontWeight: FontWeight.w700,
+                            color: AppTheme.primaryDark,
                           ),
                         ),
+                        const SizedBox(height: 2),
                         Text(
                           driver.email,
-                          style: TextStyle(color: Colors.grey[600], fontSize: 13),
+                          style: GoogleFonts.inter(
+                            color: AppTheme.textSecondary,
+                            fontSize: 13,
+                          ),
                         ),
                       ],
                     ),
@@ -106,14 +116,18 @@ class _DriverDashboardPageState extends State<DriverDashboardPage> {
                     children: [
                       Text(
                         'Total Payout',
-                        style: TextStyle(color: Colors.grey[500], fontSize: 11),
+                        style: GoogleFonts.inter(
+                          color: AppTheme.textTertiary,
+                          fontSize: 11,
+                        ),
                       ),
+                      const SizedBox(height: 2),
                       Text(
                         '\$${NumberFormat('#,##0.00').format(driver.totalPayout)}',
                         style: GoogleFonts.inter(
                           fontSize: 18,
                           fontWeight: FontWeight.w800,
-                          color: AppTheme.primaryColor,
+                          color: AppTheme.primaryDark,
                         ),
                       ),
                     ],
@@ -124,21 +138,25 @@ class _DriverDashboardPageState extends State<DriverDashboardPage> {
 
             // Assigned Routes
             Padding(
-              padding: const EdgeInsets.fromLTRB(16, 20, 16, 8),
+              padding: const EdgeInsets.fromLTRB(20, 24, 20, 12),
               child: Text(
                 'Assigned Routes (${assignedRoutes.length})',
                 style: GoogleFonts.inter(
-                  fontSize: 18,
+                  fontSize: 16,
                   fontWeight: FontWeight.w700,
+                  color: AppTheme.primaryDark,
                 ),
               ),
             ),
 
             if (assignedRoutes.isEmpty)
-              const Padding(
-                padding: EdgeInsets.all(32),
+              Padding(
+                padding: const EdgeInsets.all(32),
                 child: Center(
-                  child: Text('No routes assigned yet'),
+                  child: Text(
+                    'No routes assigned yet',
+                    style: GoogleFonts.inter(color: AppTheme.textTertiary),
+                  ),
                 ),
               )
             else
@@ -149,154 +167,163 @@ class _DriverDashboardPageState extends State<DriverDashboardPage> {
                   (sum, b) => sum + b.seatNumbers.length,
                 );
                 final takenSeats = route.totalSeats - route.availableSeats;
-                final payoutPerRun = takenSeats * route.pricePerSeat * 0.7; // 70% driver share
+                final payoutPerRun = takenSeats * route.pricePerSeat * 0.7;
                 final tripStatus = _dataService.getTripStatus(route.id);
                 final isAccepted = _acceptedRuns.contains(route.id);
 
-                return Card(
-                  margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-                  child: Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        // Route header
-                        Row(
-                          children: [
-                            Expanded(
-                              child: Text(
-                                '${route.origin} → ${route.destination}',
-                                style: GoogleFonts.inter(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w700,
-                                ),
-                              ),
-                            ),
-                            _statusBadge(tripStatus),
-                          ],
-                        ),
-                        const SizedBox(height: 12),
-
-                        // Details grid
-                        Wrap(
-                          spacing: 16,
-                          runSpacing: 8,
-                          children: [
-                            _infoChip(
-                              Icons.schedule,
-                              DateFormat('EEE, MMM d • hh:mm a')
-                                  .format(route.departureTime),
-                            ),
-                            _infoChip(
-                              Icons.people,
-                              '$passengerCount passengers',
-                            ),
-                            _infoChip(
-                              Icons.location_on,
-                              route.pickupPoint,
-                            ),
-                          ],
-                        ),
-
-                        const Divider(height: 24),
-
-                        // Payout and actions
-                        Row(
-                          children: [
-                            Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  'Payout',
-                                  style: TextStyle(
-                                    color: Colors.grey[500],
-                                    fontSize: 12,
-                                  ),
-                                ),
-                                Text(
-                                  '\$${NumberFormat('#,##0.00').format(payoutPerRun)}',
-                                  style: GoogleFonts.inter(
-                                    fontSize: 20,
-                                    fontWeight: FontWeight.w800,
-                                    color: AppTheme.primaryColor,
-                                  ),
-                                ),
-                                Text(
-                                  '70% of $takenSeats seats',
-                                  style: TextStyle(
-                                    color: Colors.grey[500],
-                                    fontSize: 11,
-                                  ),
-                                ),
-                              ],
-                            ),
-                            const Spacer(),
-
-                            // Accept Run button or Status Toggle
-                            if (!isAccepted &&
-                                tripStatus == TripStatus.notStarted)
-                              ElevatedButton.icon(
-                                onPressed: () {
-                                  setState(() {
-                                    _acceptedRuns.add(route.id);
-                                  });
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(
-                                      content: Text(
-                                        'Run accepted: ${route.origin} → ${route.destination}',
-                                      ),
-                                      backgroundColor: AppTheme.successColor,
-                                    ),
-                                  );
-                                },
-                                icon: const Icon(Icons.check, size: 18),
-                                label: const Text('Accept Run'),
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: AppTheme.successColor,
-                                ),
-                              )
-                            else if (isAccepted)
-                              _buildStatusToggle(route.id, tripStatus),
-                          ],
-                        ),
-
-                        // Pickup points for passengers
-                        if (bookings.isNotEmpty) ...[
-                          const SizedBox(height: 12),
-                          ExpansionTile(
-                            title: Text(
-                              'Passenger Pickups',
+                return Container(
+                  margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 6),
+                  padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: AppTheme.borderColor),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Route header
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              '${route.origin} → ${route.destination}',
                               style: GoogleFonts.inter(
-                                fontSize: 13,
-                                fontWeight: FontWeight.w600,
+                                fontSize: 15,
+                                fontWeight: FontWeight.w700,
+                                color: AppTheme.primaryDark,
                               ),
                             ),
-                            tilePadding: EdgeInsets.zero,
-                            children: bookings.map((b) {
-                              return ListTile(
-                                dense: true,
-                                leading: const Icon(Icons.person, size: 20),
-                                title: Text(
-                                  b.riderName,
-                                  style: const TextStyle(fontSize: 13),
-                                ),
-                                subtitle: Text(
-                                  'Seats: ${b.seatNumbers.join(", ")}',
-                                  style: const TextStyle(fontSize: 12),
-                                ),
-                                trailing: Text(
-                                  b.pickupPoint,
-                                  style: TextStyle(
-                                    fontSize: 11,
-                                    color: Colors.grey[600],
-                                  ),
-                                ),
-                              );
-                            }).toList(),
+                          ),
+                          _statusBadge(tripStatus),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+
+                      // Details
+                      Wrap(
+                        spacing: 16,
+                        runSpacing: 8,
+                        children: [
+                          _infoChip(
+                            Icons.schedule_outlined,
+                            DateFormat('EEE, MMM d • hh:mm a')
+                                .format(route.departureTime),
+                          ),
+                          _infoChip(
+                            Icons.people_outline,
+                            '$passengerCount passengers',
+                          ),
+                          _infoChip(
+                            Icons.location_on_outlined,
+                            route.pickupPoint,
                           ),
                         ],
+                      ),
+
+                      Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        child: Divider(height: 1, color: AppTheme.borderColor),
+                      ),
+
+                      // Payout and actions
+                      Row(
+                        children: [
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Payout',
+                                style: GoogleFonts.inter(
+                                  color: AppTheme.textTertiary,
+                                  fontSize: 12,
+                                ),
+                              ),
+                              Text(
+                                '\$${NumberFormat('#,##0.00').format(payoutPerRun)}',
+                                style: GoogleFonts.inter(
+                                  fontSize: 20,
+                                  fontWeight: FontWeight.w800,
+                                  color: AppTheme.primaryDark,
+                                ),
+                              ),
+                              Text(
+                                '70% of $takenSeats seats',
+                                style: GoogleFonts.inter(
+                                  color: AppTheme.textTertiary,
+                                  fontSize: 11,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const Spacer(),
+
+                          if (!isAccepted &&
+                              tripStatus == TripStatus.notStarted)
+                            ElevatedButton(
+                              onPressed: () {
+                                setState(() {
+                                  _acceptedRuns.add(route.id);
+                                });
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text(
+                                      'Run accepted: ${route.origin} → ${route.destination}',
+                                    ),
+                                  ),
+                                );
+                              },
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  const Icon(Icons.check, size: 16),
+                                  const SizedBox(width: 6),
+                                  const Text('Accept Run'),
+                                ],
+                              ),
+                            )
+                          else if (isAccepted)
+                            _buildStatusToggle(route.id, tripStatus),
+                        ],
+                      ),
+
+                      // Pickup points for passengers
+                      if (bookings.isNotEmpty) ...[
+                        const SizedBox(height: 12),
+                        ExpansionTile(
+                          title: Text(
+                            'Passenger Pickups',
+                            style: GoogleFonts.inter(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
+                              color: AppTheme.textSecondary,
+                            ),
+                          ),
+                          tilePadding: EdgeInsets.zero,
+                          children: bookings.map((b) {
+                            return ListTile(
+                              dense: true,
+                              leading: Icon(Icons.person_outline, size: 18, color: AppTheme.textSecondary),
+                              title: Text(
+                                b.riderName,
+                                style: GoogleFonts.inter(fontSize: 13, color: AppTheme.primaryDark),
+                              ),
+                              subtitle: Text(
+                                'Seats: ${b.seatNumbers.join(", ")}',
+                                style: GoogleFonts.inter(fontSize: 12, color: AppTheme.textTertiary),
+                              ),
+                              trailing: Text(
+                                b.pickupPoint,
+                                style: GoogleFonts.inter(
+                                  fontSize: 11,
+                                  color: AppTheme.textTertiary,
+                                ),
+                              ),
+                            );
+                          }).toList(),
+                        ),
                       ],
-                    ),
+                    ],
                   ),
                 );
               }),
@@ -313,17 +340,17 @@ class _DriverDashboardPageState extends State<DriverDashboardPage> {
         ButtonSegment(
           value: TripStatus.notStarted,
           label: Text('Not Started', style: TextStyle(fontSize: 10)),
-          icon: Icon(Icons.schedule, size: 14),
+          icon: Icon(Icons.schedule_outlined, size: 14),
         ),
         ButtonSegment(
           value: TripStatus.inProgress,
           label: Text('In Progress', style: TextStyle(fontSize: 10)),
-          icon: Icon(Icons.directions_car, size: 14),
+          icon: Icon(Icons.directions_car_outlined, size: 14),
         ),
         ButtonSegment(
           value: TripStatus.completed,
           label: Text('Done', style: TextStyle(fontSize: 10)),
-          icon: Icon(Icons.check_circle, size: 14),
+          icon: Icon(Icons.check_circle_outline, size: 14),
         ),
       ],
       selected: {currentStatus},
@@ -350,7 +377,7 @@ class _DriverDashboardPageState extends State<DriverDashboardPage> {
         text = 'Not Started';
         break;
       case TripStatus.inProgress:
-        color = AppTheme.seatSelected;
+        color = AppTheme.primaryColor;
         text = 'In Progress';
         break;
       case TripStatus.completed:
@@ -361,13 +388,12 @@ class _DriverDashboardPageState extends State<DriverDashboardPage> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.1),
+        color: color.withValues(alpha: 0.08),
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: color.withValues(alpha: 0.3)),
       ),
       child: Text(
         text,
-        style: TextStyle(
+        style: GoogleFonts.inter(
           color: color,
           fontSize: 12,
           fontWeight: FontWeight.w600,
@@ -380,12 +406,12 @@ class _DriverDashboardPageState extends State<DriverDashboardPage> {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Icon(icon, size: 14, color: Colors.grey[600]),
+        Icon(icon, size: 14, color: AppTheme.textTertiary),
         const SizedBox(width: 4),
         Flexible(
           child: Text(
             text,
-            style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+            style: GoogleFonts.inter(fontSize: 12, color: AppTheme.textSecondary),
             overflow: TextOverflow.ellipsis,
           ),
         ),

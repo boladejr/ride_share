@@ -60,20 +60,23 @@ class _SeatSelectionPageState extends State<SeatSelectionPage> {
     final totalPrice = _selectedSeats.length * widget.route.pricePerSeat;
 
     return Scaffold(
+      backgroundColor: Colors.white,
       appBar: AppBar(
         title: const Text('Select Your Seats'),
       ),
       body: Column(
         children: [
-          // Route info banner
+          // Route info
           Container(
             width: double.infinity,
+            margin: const EdgeInsets.fromLTRB(20, 0, 20, 0),
             padding: const EdgeInsets.all(16),
-            color: AppTheme.primaryColor.withValues(alpha: 0.05),
+            decoration: BoxDecoration(
+              color: AppTheme.surfaceColor,
+              borderRadius: BorderRadius.circular(14),
+            ),
             child: Row(
               children: [
-                const Icon(Icons.directions_car, color: AppTheme.primaryColor),
-                const SizedBox(width: 12),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -81,38 +84,54 @@ class _SeatSelectionPageState extends State<SeatSelectionPage> {
                       Text(
                         '${widget.route.origin} → ${widget.route.destination}',
                         style: GoogleFonts.inter(
-                          fontSize: 16,
+                          fontSize: 15,
                           fontWeight: FontWeight.w600,
+                          color: AppTheme.primaryDark,
                         ),
                       ),
+                      const SizedBox(height: 4),
                       Text(
                         DateFormat('EEE, MMM d • hh:mm a')
                             .format(widget.route.departureTime),
-                        style: TextStyle(color: Colors.grey[600], fontSize: 13),
+                        style: GoogleFonts.inter(
+                          color: AppTheme.textSecondary,
+                          fontSize: 13,
+                        ),
                       ),
                     ],
                   ),
                 ),
-                Text(
-                  '\$${NumberFormat('#,##0.00').format(widget.route.pricePerSeat)}/seat',
-                  style: GoogleFonts.inter(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w700,
-                    color: AppTheme.primaryColor,
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: AppTheme.primaryColor.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Text(
+                    '\$${NumberFormat('#,##0.00').format(widget.route.pricePerSeat)}/seat',
+                    style: GoogleFonts.inter(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                      color: AppTheme.primaryColor,
+                    ),
                   ),
                 ),
               ],
             ),
           ),
 
+          const SizedBox(height: 20),
+
           // Legend
           Padding(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.symmetric(horizontal: 20),
             child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 _legendItem(AppTheme.seatAvailable, 'Available'),
+                const SizedBox(width: 24),
                 _legendItem(AppTheme.seatTaken, 'Taken'),
+                const SizedBox(width: 24),
                 _legendItem(AppTheme.seatSelected, 'Selected'),
               ],
             ),
@@ -120,32 +139,31 @@ class _SeatSelectionPageState extends State<SeatSelectionPage> {
 
           // Seat grid
           Expanded(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(horizontal: 24),
+            child: Center(
               child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  // Front of car (driver seat)
+                  // Driver label
                   Container(
-                    margin: const EdgeInsets.only(bottom: 16),
-                    padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 24),
+                    padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 32),
                     decoration: BoxDecoration(
-                      color: Colors.grey[300],
+                      color: AppTheme.surfaceColor,
                       borderRadius: const BorderRadius.only(
-                        topLeft: Radius.circular(20),
-                        topRight: Radius.circular(20),
+                        topLeft: Radius.circular(16),
+                        topRight: Radius.circular(16),
                       ),
                     ),
                     child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
+                      mainAxisSize: MainAxisSize.min,
                       children: [
-                        Icon(Icons.drive_eta, color: Colors.grey[600], size: 18),
+                        Icon(Icons.drive_eta_outlined, color: AppTheme.textTertiary, size: 16),
                         const SizedBox(width: 8),
                         Text(
                           'DRIVER',
-                          style: TextStyle(
-                            color: Colors.grey[600],
+                          style: GoogleFonts.inter(
+                            color: AppTheme.textTertiary,
                             fontWeight: FontWeight.w600,
-                            fontSize: 12,
+                            fontSize: 11,
                             letterSpacing: 2,
                           ),
                         ),
@@ -153,7 +171,9 @@ class _SeatSelectionPageState extends State<SeatSelectionPage> {
                     ),
                   ),
 
-                  // Passenger seats (up to 3 in a row)
+                  const SizedBox(height: 12),
+
+                  // Passenger seats
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
@@ -171,7 +191,10 @@ class _SeatSelectionPageState extends State<SeatSelectionPage> {
                   const SizedBox(height: 16),
                   Text(
                     '${widget.route.totalSeats} passenger seats per car',
-                    style: TextStyle(color: Colors.grey[500], fontSize: 12),
+                    style: GoogleFonts.inter(
+                      color: AppTheme.textTertiary,
+                      fontSize: 12,
+                    ),
                   ),
                 ],
               ),
@@ -180,16 +203,10 @@ class _SeatSelectionPageState extends State<SeatSelectionPage> {
 
           // Bottom summary
           Container(
-            padding: const EdgeInsets.all(20),
-            decoration: BoxDecoration(
+            padding: const EdgeInsets.all(24),
+            decoration: const BoxDecoration(
               color: Colors.white,
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.1),
-                  blurRadius: 10,
-                  offset: const Offset(0, -4),
-                ),
-              ],
+              border: Border(top: BorderSide(color: AppTheme.borderColor)),
             ),
             child: SafeArea(
               child: Column(
@@ -204,7 +221,7 @@ class _SeatSelectionPageState extends State<SeatSelectionPage> {
                             '${_selectedSeats.length} seat${_selectedSeats.length != 1 ? 's' : ''} selected',
                             style: GoogleFonts.inter(
                               fontSize: 14,
-                              color: Colors.grey[600],
+                              color: AppTheme.textSecondary,
                             ),
                           ),
                           if (_selectedSeats.isNotEmpty)
@@ -212,7 +229,7 @@ class _SeatSelectionPageState extends State<SeatSelectionPage> {
                               'Seats: ${(_selectedSeats.toList()..sort()).join(', ')}',
                               style: GoogleFonts.inter(
                                 fontSize: 12,
-                                color: Colors.grey[500],
+                                color: AppTheme.textTertiary,
                               ),
                             ),
                         ],
@@ -220,20 +237,27 @@ class _SeatSelectionPageState extends State<SeatSelectionPage> {
                       Text(
                         '\$${NumberFormat('#,##0.00').format(totalPrice)}',
                         style: GoogleFonts.inter(
-                          fontSize: 24,
+                          fontSize: 26,
                           fontWeight: FontWeight.w800,
-                          color: AppTheme.primaryColor,
+                          color: AppTheme.primaryDark,
                         ),
                       ),
                     ],
                   ),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 16),
                   SizedBox(
                     width: double.infinity,
                     height: 52,
                     child: ElevatedButton(
                       onPressed: _selectedSeats.isEmpty ? null : _proceedToCheckout,
-                      child: const Text('Proceed to Checkout'),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const Text('Proceed to Checkout'),
+                          const SizedBox(width: 8),
+                          const Icon(Icons.arrow_forward, size: 16),
+                        ],
+                      ),
                     ),
                   ),
                 ],
@@ -250,7 +274,7 @@ class _SeatSelectionPageState extends State<SeatSelectionPage> {
     Color textColor;
     if (isTaken) {
       bgColor = AppTheme.seatTaken;
-      textColor = Colors.white;
+      textColor = AppTheme.textTertiary;
     } else if (isSelected) {
       bgColor = AppTheme.seatSelected;
       textColor = Colors.white;
@@ -261,22 +285,14 @@ class _SeatSelectionPageState extends State<SeatSelectionPage> {
 
     return GestureDetector(
       onTap: () => _toggleSeat(seatNumber),
-      child: Container(
-        width: 52,
-        height: 52,
-        margin: const EdgeInsets.symmetric(horizontal: 3),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        width: 60,
+        height: 60,
+        margin: const EdgeInsets.symmetric(horizontal: 6),
         decoration: BoxDecoration(
           color: bgColor,
-          borderRadius: BorderRadius.circular(8),
-          boxShadow: isSelected
-              ? [
-                  BoxShadow(
-                    color: AppTheme.seatSelected.withValues(alpha: 0.4),
-                    blurRadius: 8,
-                    offset: const Offset(0, 2),
-                  ),
-                ]
-              : null,
+          borderRadius: BorderRadius.circular(14),
         ),
         child: Center(
           child: Text(
@@ -284,7 +300,7 @@ class _SeatSelectionPageState extends State<SeatSelectionPage> {
             style: GoogleFonts.inter(
               color: textColor,
               fontWeight: FontWeight.w700,
-              fontSize: 16,
+              fontSize: 18,
             ),
           ),
         ),
@@ -296,15 +312,21 @@ class _SeatSelectionPageState extends State<SeatSelectionPage> {
     return Row(
       children: [
         Container(
-          width: 20,
-          height: 20,
+          width: 16,
+          height: 16,
           decoration: BoxDecoration(
             color: color,
             borderRadius: BorderRadius.circular(4),
           ),
         ),
         const SizedBox(width: 6),
-        Text(label, style: const TextStyle(fontSize: 13)),
+        Text(
+          label,
+          style: GoogleFonts.inter(
+            fontSize: 12,
+            color: AppTheme.textSecondary,
+          ),
+        ),
       ],
     );
   }
