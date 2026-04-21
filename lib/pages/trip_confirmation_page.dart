@@ -372,6 +372,60 @@ class _TripConfirmationPageState extends State<TripConfirmationPage> {
               ),
             ),
 
+            const SizedBox(height: 16),
+
+            // Quick actions row (share & calendar)
+            Row(
+              children: [
+                Expanded(
+                  child: _actionCard(
+                    Icons.share_outlined,
+                    'Share trip',
+                    () => ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Trip details copied to clipboard!')),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: _actionCard(
+                    Icons.calendar_today_outlined,
+                    'Add to calendar',
+                    () => ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Calendar event created!')),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+
+            const SizedBox(height: 16),
+
+            // Next steps card
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                color: AppTheme.surfaceColor,
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'What happens next',
+                    style: GoogleFonts.inter(fontSize: 15, fontWeight: FontWeight.w700, color: AppTheme.primaryDark),
+                  ),
+                  const SizedBox(height: 14),
+                  _nextStep(Icons.notifications_outlined, 'You\'ll get a reminder before your trip.'),
+                  const SizedBox(height: 10),
+                  _nextStep(Icons.location_on_outlined, 'Head to the pickup point 10 min early.'),
+                  const SizedBox(height: 10),
+                  _nextStep(Icons.directions_car_outlined, 'Track your driver live once the trip starts.'),
+                ],
+              ),
+            ),
+
             const SizedBox(height: 24),
 
             // Back to home
@@ -379,14 +433,13 @@ class _TripConfirmationPageState extends State<TripConfirmationPage> {
               width: double.infinity,
               height: 52,
               child: OutlinedButton(
-                onPressed: () =>
-                    Navigator.popUntil(context, (route) => route.isFirst),
-                child: Row(
+                onPressed: () => Navigator.popUntil(context, (route) => route.isFirst),
+                child: const Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    const Icon(Icons.home_outlined, size: 18),
-                    const SizedBox(width: 8),
-                    const Text('Back to Home'),
+                    Icon(Icons.home_outlined, size: 18),
+                    SizedBox(width: 8),
+                    Text('Back to Home'),
                   ],
                 ),
               ),
@@ -395,6 +448,47 @@ class _TripConfirmationPageState extends State<TripConfirmationPage> {
           ],
         ),
       ),
+    );
+  }
+
+  Widget _actionCard(IconData icon, String label, VoidCallback onTap) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(14),
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: AppTheme.borderColor),
+        ),
+        child: Column(
+          children: [
+            Icon(icon, color: AppTheme.primaryColor, size: 22),
+            const SizedBox(height: 6),
+            Text(label, style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600, color: AppTheme.primaryDark)),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _nextStep(IconData icon, String text) {
+    return Row(
+      children: [
+        Container(
+          padding: const EdgeInsets.all(6),
+          decoration: BoxDecoration(
+            color: AppTheme.primaryColor.withValues(alpha: 0.08),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Icon(icon, color: AppTheme.primaryColor, size: 16),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Text(text, style: GoogleFonts.inter(fontSize: 13, color: AppTheme.textSecondary)),
+        ),
+      ],
     );
   }
 

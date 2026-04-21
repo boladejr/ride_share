@@ -72,13 +72,34 @@ class _AdminPanelPageState extends State<AdminPanelPage>
           ],
         ),
       ),
-      body: TabBarView(
-        controller: _tabController,
+      body: Column(
         children: [
-          _buildRoutesTab(),
-          _buildBookingsTab(),
-          _buildDriversTab(),
-          _buildPricingTab(),
+          // Stats overview cards
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+            child: Row(
+              children: [
+                Expanded(child: _statCard('Routes', '${_dataService.routes.length}', Icons.route_outlined, AppTheme.primaryColor)),
+                const SizedBox(width: 8),
+                Expanded(child: _statCard('Bookings', '${_dataService.bookings.length}', Icons.book_outlined, Colors.orange)),
+                const SizedBox(width: 8),
+                Expanded(child: _statCard('Drivers', '${_dataService.drivers.length}', Icons.drive_eta_outlined, AppTheme.successColor)),
+                const SizedBox(width: 8),
+                Expanded(child: _statCard('Revenue', '\$${NumberFormat('#,##0').format(_dataService.bookings.fold<double>(0, (sum, b) => sum + b.totalPrice))}', Icons.attach_money, AppTheme.primaryDark)),
+              ],
+            ),
+          ),
+          Expanded(
+            child: TabBarView(
+              controller: _tabController,
+              children: [
+                _buildRoutesTab(),
+                _buildBookingsTab(),
+                _buildDriversTab(),
+                _buildPricingTab(),
+              ],
+            ),
+          ),
         ],
       ),
     );
@@ -727,6 +748,26 @@ class _AdminPanelPageState extends State<AdminPanelPage>
           ),
         );
       },
+    );
+  }
+
+  Widget _statCard(String label, String value, IconData icon, Color color) {
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppTheme.borderColor),
+      ),
+      child: Column(
+        children: [
+          Icon(icon, color: color, size: 18),
+          const SizedBox(height: 6),
+          Text(value, style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w800, color: AppTheme.primaryDark)),
+          const SizedBox(height: 2),
+          Text(label, style: GoogleFonts.inter(fontSize: 10, color: AppTheme.textTertiary)),
+        ],
+      ),
     );
   }
 }

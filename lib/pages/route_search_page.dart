@@ -31,15 +31,48 @@ class RouteSearchPage extends StatelessWidget {
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Date subtitle
-          Padding(
-            padding: const EdgeInsets.fromLTRB(20, 4, 20, 16),
-            child: Text(
-              DateFormat('EEEE, MMMM d, yyyy').format(date),
-              style: GoogleFonts.inter(
-                fontSize: 14,
-                color: AppTheme.textSecondary,
-              ),
+          // Date + results count header
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.fromLTRB(20, 8, 20, 14),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        DateFormat('EEEE, MMMM d, yyyy').format(date),
+                        style: GoogleFonts.inter(fontSize: 14, color: AppTheme.textSecondary),
+                      ),
+                      if (routes.isNotEmpty)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 4),
+                          child: Text(
+                            '${routes.length} ride${routes.length != 1 ? 's' : ''} available',
+                            style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: AppTheme.primaryColor),
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+                // Sort pills
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: AppTheme.primaryColor.withValues(alpha: 0.08),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.sort, size: 14, color: AppTheme.primaryColor),
+                      const SizedBox(width: 4),
+                      Text('Earliest', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: AppTheme.primaryColor)),
+                    ],
+                  ),
+                ),
+              ],
             ),
           ),
           const Divider(height: 1, color: AppTheme.borderColor),
@@ -49,20 +82,23 @@ class RouteSearchPage extends StatelessWidget {
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Icon(Icons.search_off_outlined, size: 64, color: AppTheme.textTertiary),
-                        const SizedBox(height: 16),
-                        Text(
-                          'No routes found',
-                          style: GoogleFonts.inter(
-                            fontSize: 18,
-                            fontWeight: FontWeight.w600,
-                            color: AppTheme.textPrimary,
+                        Container(
+                          padding: const EdgeInsets.all(20),
+                          decoration: BoxDecoration(
+                            color: AppTheme.surfaceColor,
+                            shape: BoxShape.circle,
                           ),
+                          child: Icon(Icons.search_off_outlined, size: 48, color: AppTheme.textTertiary),
+                        ),
+                        const SizedBox(height: 20),
+                        Text(
+                          'No rides found',
+                          style: GoogleFonts.inter(fontSize: 18, fontWeight: FontWeight.w700, color: AppTheme.primaryDark),
                         ),
                         const SizedBox(height: 6),
                         Text(
                           'Try different cities or dates',
-                          style: GoogleFonts.inter(color: AppTheme.textSecondary),
+                          style: GoogleFonts.inter(color: AppTheme.textSecondary, fontSize: 14),
                         ),
                       ],
                     ),
@@ -120,72 +156,78 @@ class _RouteCard extends StatelessWidget {
           padding: const EdgeInsets.all(20),
           child: Column(
             children: [
-              // Route header
+              // Visual timeline route header
               Row(
                 children: [
+                  // Origin column with dot
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          route.origin,
-                          style: GoogleFonts.inter(
-                            fontSize: 17,
-                            fontWeight: FontWeight.w700,
-                            color: AppTheme.primaryDark,
-                          ),
+                          departureFormat.format(route.departureTime),
+                          style: GoogleFonts.inter(fontSize: 12, color: AppTheme.textSecondary),
                         ),
                         const SizedBox(height: 4),
-                        Text(
-                          departureFormat.format(route.departureTime),
-                          style: GoogleFonts.inter(
-                            fontSize: 13,
-                            color: AppTheme.textSecondary,
-                          ),
+                        Row(
+                          children: [
+                            Container(
+                              width: 10, height: 10,
+                              decoration: BoxDecoration(color: AppTheme.primaryColor, shape: BoxShape.circle),
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                route.origin,
+                                style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w700, color: AppTheme.primaryDark),
+                              ),
+                            ),
+                          ],
                         ),
                       ],
                     ),
                   ),
-                  Column(
-                    children: [
-                      Icon(Icons.arrow_forward, color: AppTheme.textTertiary, size: 18),
-                      const SizedBox(height: 4),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: AppTheme.surfaceColor,
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Text(
-                          _formatDuration(route.duration),
-                          style: GoogleFonts.inter(
-                            fontSize: 12,
-                            color: AppTheme.textSecondary,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
+                  // Duration pill in center
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 8),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: AppTheme.surfaceColor,
+                        borderRadius: BorderRadius.circular(20),
                       ),
-                    ],
+                      child: Text(
+                        _formatDuration(route.duration),
+                        style: GoogleFonts.inter(fontSize: 12, color: AppTheme.textSecondary, fontWeight: FontWeight.w600),
+                      ),
+                    ),
                   ),
+                  // Destination column with dot
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.end,
                       children: [
                         Text(
-                          route.destination,
-                          style: GoogleFonts.inter(
-                            fontSize: 17,
-                            fontWeight: FontWeight.w700,
-                            color: AppTheme.primaryDark,
-                          ),
+                          departureFormat.format(arrivalTime),
+                          style: GoogleFonts.inter(fontSize: 12, color: AppTheme.textSecondary),
                         ),
                         const SizedBox(height: 4),
-                        Text(
-                          departureFormat.format(arrivalTime),
-                          style: GoogleFonts.inter(
-                            fontSize: 13,
-                            color: AppTheme.textSecondary,
-                          ),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.end,
+                          children: [
+                            Expanded(
+                              child: Text(
+                                route.destination,
+                                textAlign: TextAlign.right,
+                                style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w700, color: AppTheme.primaryDark),
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Container(
+                              width: 10, height: 10,
+                              decoration: BoxDecoration(color: AppTheme.primaryDark, shape: BoxShape.circle),
+                            ),
+                          ],
                         ),
                       ],
                     ),
@@ -193,15 +235,24 @@ class _RouteCard extends StatelessWidget {
                 ],
               ),
 
+              // Connecting line
               Padding(
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                child: Divider(height: 1, color: AppTheme.borderColor),
+                padding: const EdgeInsets.symmetric(vertical: 8),
+                child: Row(
+                  children: [
+                    const SizedBox(width: 4),
+                    Expanded(
+                      child: Container(height: 1, color: AppTheme.borderColor),
+                    ),
+                    const SizedBox(width: 4),
+                  ],
+                ),
               ),
 
-              // Bottom row
+              // Driver preview + seats + price row
               Row(
                 children: [
-                  // Seats available
+                  // Driver preview
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                     decoration: BoxDecoration(
@@ -211,36 +262,21 @@ class _RouteCard extends StatelessWidget {
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Icon(Icons.event_seat_outlined, size: 14, color: AppTheme.textSecondary),
+                        Icon(Icons.directions_car_outlined, size: 14, color: AppTheme.textSecondary),
                         const SizedBox(width: 4),
                         Text(
                           '${route.availableSeats} seat${route.availableSeats != 1 ? 's' : ''} left',
-                          style: GoogleFonts.inter(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w500,
-                            color: AppTheme.textSecondary,
-                          ),
+                          style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w500, color: AppTheme.textSecondary),
                         ),
                       ],
                     ),
                   ),
                   const Spacer(),
-                  // Price
                   Text(
                     '\$${NumberFormat('#,##0.00').format(route.pricePerSeat)}',
-                    style: GoogleFonts.inter(
-                      fontSize: 20,
-                      fontWeight: FontWeight.w800,
-                      color: AppTheme.primaryDark,
-                    ),
+                    style: GoogleFonts.inter(fontSize: 22, fontWeight: FontWeight.w800, color: AppTheme.primaryDark),
                   ),
-                  Text(
-                    '/seat',
-                    style: GoogleFonts.inter(
-                      fontSize: 13,
-                      color: AppTheme.textTertiary,
-                    ),
-                  ),
+                  Text('/seat', style: GoogleFonts.inter(fontSize: 13, color: AppTheme.textTertiary)),
                 ],
               ),
 
@@ -249,19 +285,15 @@ class _RouteCard extends StatelessWidget {
               // Select Seats button
               SizedBox(
                 width: double.infinity,
+                height: 48,
                 child: ElevatedButton(
                   onPressed: route.availableSeats > 0
-                      ? () => Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => SeatSelectionPage(route: route),
-                            ),
-                          )
+                      ? () => Navigator.push(context, MaterialPageRoute(builder: (_) => SeatSelectionPage(route: route)))
                       : null,
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Text(route.availableSeats > 0 ? 'Select Seats' : 'Sold Out'),
+                      Text(route.availableSeats > 0 ? 'Select seats' : 'Sold out'),
                       if (route.availableSeats > 0) ...[
                         const SizedBox(width: 8),
                         const Icon(Icons.arrow_forward, size: 16),

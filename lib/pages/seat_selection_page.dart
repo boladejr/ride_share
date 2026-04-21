@@ -137,66 +137,85 @@ class _SeatSelectionPageState extends State<SeatSelectionPage> {
             ),
           ),
 
-          // Seat grid
+          // Car visual with seats
           Expanded(
             child: Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  // Driver label
-                  Container(
-                    padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 32),
-                    decoration: BoxDecoration(
-                      color: AppTheme.surfaceColor,
-                      borderRadius: const BorderRadius.only(
-                        topLeft: Radius.circular(16),
-                        topRight: Radius.circular(16),
+              child: Container(
+                margin: const EdgeInsets.symmetric(horizontal: 40),
+                padding: const EdgeInsets.all(24),
+                decoration: BoxDecoration(
+                  color: AppTheme.surfaceColor,
+                  borderRadius: BorderRadius.circular(32),
+                  border: Border.all(color: AppTheme.borderColor),
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // Windshield / Driver area
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: AppTheme.borderColor),
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.drive_eta_outlined, color: AppTheme.textTertiary, size: 18),
+                          const SizedBox(width: 8),
+                          Text(
+                            'DRIVER',
+                            style: GoogleFonts.inter(
+                              color: AppTheme.textTertiary,
+                              fontWeight: FontWeight.w600,
+                              fontSize: 11,
+                              letterSpacing: 2,
+                            ),
+                          ),
+                        ],
                       ),
                     ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
+                    const SizedBox(height: 20),
+
+                    // Passenger seats row
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Icon(Icons.drive_eta_outlined, color: AppTheme.textTertiary, size: 16),
-                        const SizedBox(width: 8),
-                        Text(
-                          'DRIVER',
-                          style: GoogleFonts.inter(
-                            color: AppTheme.textTertiary,
-                            fontWeight: FontWeight.w600,
-                            fontSize: 11,
-                            letterSpacing: 2,
+                        for (int i = 1; i <= widget.route.totalSeats; i++)
+                          Builder(
+                            builder: (context) {
+                              final isTaken = _takenSeats.contains(i);
+                              final isSelected = _selectedSeats.contains(i);
+                              return _buildSeat(i, isTaken, isSelected);
+                            },
                           ),
-                        ),
                       ],
                     ),
-                  ),
+                    const SizedBox(height: 20),
 
-                  const SizedBox(height: 12),
-
-                  // Passenger seats
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      for (int i = 1; i <= widget.route.totalSeats; i++)
-                        Builder(
-                          builder: (context) {
-                            final isTaken = _takenSeats.contains(i);
-                            final isSelected = _selectedSeats.contains(i);
-                            return _buildSeat(i, isTaken, isSelected);
-                          },
-                        ),
-                    ],
-                  ),
-
-                  const SizedBox(height: 16),
-                  Text(
-                    '${widget.route.totalSeats} passenger seats per car',
-                    style: GoogleFonts.inter(
-                      color: AppTheme.textTertiary,
-                      fontSize: 12,
+                    // Comfort note
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                      decoration: BoxDecoration(
+                        color: AppTheme.primaryColor.withValues(alpha: 0.06),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.airline_seat_recline_normal_outlined, size: 16, color: AppTheme.primaryColor),
+                          const SizedBox(width: 6),
+                          Text(
+                            'Comfortable ${widget.route.totalSeats}-seat car ride',
+                            style: GoogleFonts.inter(fontSize: 12, color: AppTheme.primaryColor, fontWeight: FontWeight.w500),
+                          ),
+                        ],
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
           ),

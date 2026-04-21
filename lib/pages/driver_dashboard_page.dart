@@ -80,11 +80,7 @@ class _DriverDashboardPageState extends State<DriverDashboardPage> {
                     backgroundColor: AppTheme.primaryColor,
                     child: Text(
                       driver.name[0],
-                      style: GoogleFonts.inter(
-                        fontSize: 20,
-                        fontWeight: FontWeight.w700,
-                        color: Colors.white,
-                      ),
+                      style: GoogleFonts.inter(fontSize: 20, fontWeight: FontWeight.w700, color: Colors.white),
                     ),
                   ),
                   const SizedBox(width: 14),
@@ -92,45 +88,48 @@ class _DriverDashboardPageState extends State<DriverDashboardPage> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(
-                          driver.name,
-                          style: GoogleFonts.inter(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w700,
-                            color: AppTheme.primaryDark,
-                          ),
-                        ),
+                        Text(driver.name, style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w700, color: AppTheme.primaryDark)),
                         const SizedBox(height: 2),
-                        Text(
-                          driver.email,
-                          style: GoogleFonts.inter(
-                            color: AppTheme.textSecondary,
-                            fontSize: 13,
-                          ),
-                        ),
+                        Text(driver.email, style: GoogleFonts.inter(color: AppTheme.textSecondary, fontSize: 13)),
                       ],
                     ),
                   ),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    children: [
-                      Text(
-                        'Total Payout',
-                        style: GoogleFonts.inter(
-                          color: AppTheme.textTertiary,
-                          fontSize: 11,
-                        ),
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        '\$${NumberFormat('#,##0.00').format(driver.totalPayout)}',
-                        style: GoogleFonts.inter(
-                          fontSize: 18,
-                          fontWeight: FontWeight.w800,
-                          color: AppTheme.primaryDark,
-                        ),
-                      ),
-                    ],
+                ],
+              ),
+            ),
+
+            const SizedBox(height: 16),
+
+            // Earnings summary cards
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: _earningsCard(
+                      'Total Earnings',
+                      '\$${NumberFormat('#,##0.00').format(driver.totalPayout)}',
+                      Icons.account_balance_wallet_outlined,
+                      AppTheme.primaryColor,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: _earningsCard(
+                      'Active Routes',
+                      '${assignedRoutes.length}',
+                      Icons.route_outlined,
+                      Colors.orange,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: _earningsCard(
+                      'Completed',
+                      '${assignedRoutes.where((r) => _dataService.getTripStatus(r.id) == TripStatus.completed).length}',
+                      Icons.check_circle_outline,
+                      AppTheme.successColor,
+                    ),
                   ),
                 ],
               ),
@@ -141,11 +140,7 @@ class _DriverDashboardPageState extends State<DriverDashboardPage> {
               padding: const EdgeInsets.fromLTRB(20, 24, 20, 12),
               child: Text(
                 'Assigned Routes (${assignedRoutes.length})',
-                style: GoogleFonts.inter(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w700,
-                  color: AppTheme.primaryDark,
-                ),
+                style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w700, color: AppTheme.primaryDark),
               ),
             ),
 
@@ -398,6 +393,33 @@ class _DriverDashboardPageState extends State<DriverDashboardPage> {
           fontSize: 12,
           fontWeight: FontWeight.w600,
         ),
+      ),
+    );
+  }
+
+  Widget _earningsCard(String label, String value, IconData icon, Color color) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: AppTheme.borderColor),
+      ),
+      child: Column(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: color.withValues(alpha: 0.08),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Icon(icon, color: color, size: 18),
+          ),
+          const SizedBox(height: 8),
+          Text(value, style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w800, color: AppTheme.primaryDark)),
+          const SizedBox(height: 2),
+          Text(label, style: GoogleFonts.inter(fontSize: 11, color: AppTheme.textTertiary)),
+        ],
       ),
     );
   }

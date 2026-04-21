@@ -87,6 +87,20 @@ class _CheckoutPageState extends State<CheckoutPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // Step indicator
+            Padding(
+              padding: const EdgeInsets.only(bottom: 20),
+              child: Row(
+                children: [
+                  _stepIndicator('1', 'Route', true),
+                  _stepLine(true),
+                  _stepIndicator('2', 'Seats', true),
+                  _stepLine(true),
+                  _stepIndicator('3', 'Payment', false),
+                ],
+              ),
+            ),
+
             // Order Summary
             Container(
               width: double.infinity,
@@ -303,20 +317,90 @@ class _CheckoutPageState extends State<CheckoutPage> {
               ),
             ),
 
+            const SizedBox(height: 16),
+
+            // Trust badges
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: AppTheme.surfaceColor,
+                borderRadius: BorderRadius.circular(14),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceAround,
+                children: [
+                  _trustBadge(Icons.lock_outline, 'Secure\npayment'),
+                  _trustBadge(Icons.shield_outlined, 'Buyer\nprotection'),
+                  _trustBadge(Icons.receipt_long_outlined, 'Instant\nconfirmation'),
+                ],
+              ),
+            ),
+
             const SizedBox(height: 12),
             Center(
               child: Text(
                 'Your payment is secured by Stripe',
-                style: GoogleFonts.inter(
-                  color: AppTheme.textTertiary,
-                  fontSize: 12,
-                ),
+                style: GoogleFonts.inter(color: AppTheme.textTertiary, fontSize: 12),
               ),
             ),
             const SizedBox(height: 24),
           ],
         ),
       ),
+    );
+  }
+
+  Widget _stepIndicator(String number, String label, bool completed) {
+    return Column(
+      children: [
+        Container(
+          width: 28,
+          height: 28,
+          decoration: BoxDecoration(
+            color: completed ? AppTheme.primaryColor : AppTheme.surfaceColor,
+            shape: BoxShape.circle,
+            border: completed ? null : Border.all(color: AppTheme.borderColor),
+          ),
+          child: Center(
+            child: completed
+                ? const Icon(Icons.check, color: Colors.white, size: 14)
+                : Text(number, style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w700, color: AppTheme.textSecondary)),
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(label, style: GoogleFonts.inter(fontSize: 11, color: completed ? AppTheme.primaryColor : AppTheme.textTertiary, fontWeight: FontWeight.w500)),
+      ],
+    );
+  }
+
+  Widget _stepLine(bool completed) {
+    return Expanded(
+      child: Padding(
+        padding: const EdgeInsets.only(bottom: 18),
+        child: Container(
+          height: 2,
+          margin: const EdgeInsets.symmetric(horizontal: 8),
+          color: completed ? AppTheme.primaryColor : AppTheme.borderColor,
+        ),
+      ),
+    );
+  }
+
+  Widget _trustBadge(IconData icon, String label) {
+    return Column(
+      children: [
+        Container(
+          padding: const EdgeInsets.all(10),
+          decoration: BoxDecoration(
+            color: AppTheme.primaryColor.withValues(alpha: 0.08),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Icon(icon, color: AppTheme.primaryColor, size: 20),
+        ),
+        const SizedBox(height: 6),
+        Text(label, textAlign: TextAlign.center, style: GoogleFonts.inter(fontSize: 11, color: AppTheme.textSecondary, height: 1.3)),
+      ],
     );
   }
 
