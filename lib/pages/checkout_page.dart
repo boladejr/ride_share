@@ -58,17 +58,21 @@ class _CheckoutPageState extends State<CheckoutPage> {
     // Also save to Firestore for persistence
     final auth = FirebaseAuthService();
     if (auth.isLoggedIn && auth.currentUser != null) {
-      await FirestoreDataService().saveBooking(
-        userId: auth.currentUser!.id,
-        routeId: widget.route.id,
-        seats: widget.selectedSeats.length,
-        totalPrice: _totalPrice,
-        pickupAddress: widget.route.pickupPoint,
-        origin: widget.route.origin,
-        destination: widget.route.destination,
-        seatNumbers: widget.selectedSeats,
-        departureTime: widget.route.departureTime,
-      );
+      try {
+        await FirestoreDataService().saveBooking(
+          userId: auth.currentUser!.id,
+          routeId: widget.route.id,
+          seats: widget.selectedSeats.length,
+          totalPrice: _totalPrice,
+          pickupAddress: widget.route.pickupPoint,
+          origin: widget.route.origin,
+          destination: widget.route.destination,
+          seatNumbers: widget.selectedSeats,
+          departureTime: widget.route.departureTime,
+        );
+      } catch (_) {
+        // Firestore save failed; booking still proceeds via mock service
+      }
     }
 
     if (!mounted) return;

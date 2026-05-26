@@ -86,9 +86,17 @@ class FirestoreDataService {
     final snapshot = await _firestore!
         .collection('bookings')
         .where('userId', isEqualTo: userId)
-        .orderBy('createdAt', descending: true)
         .get();
 
-    return snapshot.docs.map((doc) => {'id': doc.id, ...doc.data()}).toList();
+    final results = snapshot.docs.map((doc) => {'id': doc.id, ...doc.data()}).toList();
+    results.sort((a, b) {
+      final aTime = a['createdAt'] as Timestamp?;
+      final bTime = b['createdAt'] as Timestamp?;
+      if (aTime == null && bTime == null) return 0;
+      if (aTime == null) return 1;
+      if (bTime == null) return -1;
+      return bTime.compareTo(aTime);
+    });
+    return results;
   }
 }
