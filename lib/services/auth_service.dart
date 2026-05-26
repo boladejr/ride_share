@@ -79,12 +79,19 @@ class AuthService extends ChangeNotifier {
     String? name,
     String? phone,
     String? address,
+    bool clearAddress = false,
   }) {
     if (_currentUser == null) return;
-    _currentUser = _currentUser!.copyWith(
-      name: name,
-      phone: phone,
-      address: address,
+    final current = _currentUser!;
+    _currentUser = UserModel(
+      id: current.id,
+      name: name ?? current.name,
+      email: current.email,
+      phone: phone ?? current.phone,
+      role: current.role,
+      profileImageUrl: current.profileImageUrl,
+      address: clearAddress ? null : (address ?? current.address),
+      createdAt: current.createdAt,
     );
     final index = _registeredUsers.indexWhere((u) => u.id == _currentUser!.id);
     if (index != -1) {

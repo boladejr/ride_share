@@ -42,6 +42,7 @@ class _ProfilePageState extends State<ProfilePage> {
       name: _nameController.text,
       phone: _phoneController.text,
       address: _addressController.text.isEmpty ? null : _addressController.text,
+      clearAddress: _addressController.text.isEmpty,
     );
     setState(() => _isEditing = false);
     ScaffoldMessenger.of(context).showSnackBar(
