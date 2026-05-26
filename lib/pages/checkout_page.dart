@@ -3,6 +3,8 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import '../models/route_model.dart';
 import '../services/mock_data_service.dart';
+import '../services/firebase_auth_service.dart';
+import '../services/firestore_data_service.dart';
 import '../theme.dart';
 import 'trip_confirmation_page.dart';
 
@@ -46,12 +48,28 @@ class _CheckoutPageState extends State<CheckoutPage> {
     // Simulate Stripe payment processing
     await Future.delayed(const Duration(seconds: 2));
 
-    // Create booking in mock Firestore
+    // Create booking in mock service
     final booking = _dataService.createBooking(
       routeId: widget.route.id,
       seatNumbers: widget.selectedSeats,
       totalPrice: _totalPrice,
     );
+
+    // Also save to Firestore for persistence
+    final auth = FirebaseAuthService();
+    if (auth.isLoggedIn && auth.currentUser != null) {
+      await FirestoreDataService().saveBooking(
+        userId: auth.currentUser!.id,
+        routeId: widget.route.id,
+        seats: widget.selectedSeats.length,
+        totalPrice: _totalPrice,
+        pickupAddress: widget.route.pickupPoint,
+        origin: widget.route.origin,
+        destination: widget.route.destination,
+        seatNumbers: widget.selectedSeats,
+        departureTime: widget.route.departureTime,
+      );
+    }
 
     if (!mounted) return;
     setState(() => _processing = false);

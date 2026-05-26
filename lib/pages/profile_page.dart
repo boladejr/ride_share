@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:intl/intl.dart';
 import '../services/firebase_auth_service.dart';
+import '../services/firestore_data_service.dart';
 import '../models/user_model.dart';
 import '../theme.dart';
 
@@ -15,10 +17,14 @@ class ProfilePage extends StatefulWidget {
 
 class _ProfilePageState extends State<ProfilePage> {
   final _auth = FirebaseAuthService();
+  final _firestoreService = FirestoreDataService();
   bool _isEditing = false;
   late TextEditingController _nameController;
   late TextEditingController _phoneController;
   late TextEditingController _addressController;
+
+  List<Map<String, dynamic>> _bookings = [];
+  bool _loadingBookings = true;
 
   @override
   void initState() {
@@ -27,6 +33,26 @@ class _ProfilePageState extends State<ProfilePage> {
     _nameController = TextEditingController(text: user.name);
     _phoneController = TextEditingController(text: user.phone);
     _addressController = TextEditingController(text: user.address ?? '');
+    _loadBookings();
+  }
+
+  Future<void> _loadBookings() async {
+    final user = _auth.currentUser;
+    if (user == null) return;
+
+    try {
+      final bookings = await _firestoreService.getUserBookings(user.id);
+      if (mounted) {
+        setState(() {
+          _bookings = bookings;
+          _loadingBookings = false;
+        });
+      }
+    } catch (_) {
+      if (mounted) {
+        setState(() => _loadingBookings = false);
+      }
+    }
   }
 
   @override
@@ -179,6 +205,67 @@ class _ProfilePageState extends State<ProfilePage> {
 
             const SizedBox(height: 24),
 
+            // My Bookings section
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24),
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 500),
+                child: Container(
+                  padding: const EdgeInsets.all(24),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: AppTheme.borderColor),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Icon(Icons.confirmation_number_outlined, size: 20, color: AppTheme.primaryColor),
+                          const SizedBox(width: 8),
+                          Text('My Bookings', style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w700, color: AppTheme.primaryDark)),
+                        ],
+                      ),
+                      const SizedBox(height: 16),
+                      if (_loadingBookings)
+                        const Center(
+                          child: Padding(
+                            padding: EdgeInsets.all(24),
+                            child: CircularProgressIndicator(),
+                          ),
+                        )
+                      else if (_bookings.isEmpty)
+                        Center(
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 24),
+                            child: Column(
+                              children: [
+                                Icon(Icons.directions_car_outlined, size: 40, color: AppTheme.textTertiary),
+                                const SizedBox(height: 12),
+                                Text(
+                                  'No bookings yet',
+                                  style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w600, color: AppTheme.textSecondary),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  'Book a ride to see it here',
+                                  style: GoogleFonts.inter(fontSize: 12, color: AppTheme.textTertiary),
+                                ),
+                              ],
+                            ),
+                          ),
+                        )
+                      else
+                        ...(_bookings.map((booking) => _bookingCard(booking))),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+
+            const SizedBox(height: 24),
+
             // Logout button
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 24),
@@ -209,6 +296,125 @@ class _ProfilePageState extends State<ProfilePage> {
             const SizedBox(height: 48),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _bookingCard(Map<String, dynamic> booking) {
+    final origin = booking['origin'] ?? '';
+    final destination = booking['destination'] ?? '';
+    final status = booking['status'] ?? 'confirmed';
+    final totalPrice = (booking['totalPrice'] as num?)?.toDouble() ?? 0;
+    final seats = booking['seats'] as int? ?? 0;
+    final seatNumbers = booking['seatNumbers'] as List<dynamic>?;
+    final createdAt = booking['createdAt'];
+    final pickupAddress = booking['pickupAddress'] as String?;
+
+    DateTime? bookingDate;
+    if (createdAt != null) {
+      try {
+        bookingDate = createdAt.toDate();
+      } catch (_) {}
+    }
+
+    final statusColor = status == 'confirmed'
+        ? AppTheme.successColor
+        : status == 'cancelled'
+            ? AppTheme.errorColor
+            : Colors.orange;
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppTheme.surfaceColor,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 8, height: 8,
+                decoration: BoxDecoration(color: AppTheme.primaryColor, shape: BoxShape.circle),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  origin.isNotEmpty && destination.isNotEmpty
+                      ? '$origin  \u2192  $destination'
+                      : 'Ride Booking',
+                  style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w600, color: AppTheme.primaryDark),
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                decoration: BoxDecoration(
+                  color: statusColor.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  status[0].toUpperCase() + status.substring(1),
+                  style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w600, color: statusColor),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              if (seats > 0) ...[
+                Icon(Icons.event_seat_outlined, size: 14, color: AppTheme.textTertiary),
+                const SizedBox(width: 4),
+                Text(
+                  seatNumbers != null
+                      ? 'Seats ${seatNumbers.join(', ')}'
+                      : '$seats seat${seats != 1 ? 's' : ''}',
+                  style: GoogleFonts.inter(fontSize: 12, color: AppTheme.textSecondary),
+                ),
+                const SizedBox(width: 16),
+              ],
+              if (totalPrice > 0) ...[
+                Icon(Icons.attach_money, size: 14, color: AppTheme.textTertiary),
+                const SizedBox(width: 2),
+                Text(
+                  NumberFormat('#,##0.00').format(totalPrice),
+                  style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: AppTheme.primaryDark),
+                ),
+              ],
+            ],
+          ),
+          if (pickupAddress != null && pickupAddress.isNotEmpty) ...[
+            const SizedBox(height: 6),
+            Row(
+              children: [
+                Icon(Icons.location_on_outlined, size: 14, color: AppTheme.textTertiary),
+                const SizedBox(width: 4),
+                Expanded(
+                  child: Text(
+                    pickupAddress,
+                    style: GoogleFonts.inter(fontSize: 11, color: AppTheme.textTertiary),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ],
+            ),
+          ],
+          if (bookingDate != null) ...[
+            const SizedBox(height: 6),
+            Row(
+              children: [
+                Icon(Icons.access_time, size: 14, color: AppTheme.textTertiary),
+                const SizedBox(width: 4),
+                Text(
+                  DateFormat('MMM d, yyyy \u2022 h:mm a').format(bookingDate),
+                  style: GoogleFonts.inter(fontSize: 11, color: AppTheme.textTertiary),
+                ),
+              ],
+            ),
+          ],
+        ],
       ),
     );
   }

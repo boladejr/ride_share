@@ -31,6 +31,10 @@ class FirestoreDataService {
     String? pickupAddress,
     String? dropoffAddress,
     String? paymentIntentId,
+    String? origin,
+    String? destination,
+    List<int>? seatNumbers,
+    DateTime? departureTime,
   }) async {
     if (!_useFirestore) return;
     _init();
@@ -43,6 +47,10 @@ class FirestoreDataService {
       'pickupAddress': pickupAddress,
       'dropoffAddress': dropoffAddress,
       'paymentIntentId': paymentIntentId,
+      'origin': origin,
+      'destination': destination,
+      'seatNumbers': seatNumbers,
+      'departureTime': departureTime != null ? Timestamp.fromDate(departureTime) : null,
       'status': 'confirmed',
       'createdAt': FieldValue.serverTimestamp(),
     });

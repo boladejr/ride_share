@@ -9,7 +9,7 @@ class StripeConfig {
   // - Firebase Cloud Functions
   // - Fly.io / Railway / Render
   // - Any server that can run the stripe-backend/ FastAPI app
-  static const String paymentBackendUrl = 'https://user:916695fe331be0d37ef6b1ae0805f3f3@b2b0d16b3416-tunnel-8wambq1b.devinapps.com';
+  static const String paymentBackendUrl = 'https://rideshare-production-a046.up.railway.app';
 
   static bool get isConfigured =>
       publishableKey != 'YOUR_STRIPE_PUBLISHABLE_KEY';
