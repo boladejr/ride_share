@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'theme.dart';
-import 'pages/landing_page.dart';
+import 'pages/app_shell.dart';
 
 void main() {
   runApp(const RideShareApp());
@@ -15,7 +15,7 @@ class RideShareApp extends StatelessWidget {
       title: 'RideShare',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.lightTheme,
-      home: const LandingPage(),
+      home: const AppShell(),
     );
   }
 }

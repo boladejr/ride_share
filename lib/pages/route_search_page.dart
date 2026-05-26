@@ -10,12 +10,16 @@ class RouteSearchPage extends StatelessWidget {
   final String origin;
   final String destination;
   final DateTime date;
+  final String? pickupAddress;
+  final String? dropoffAddress;
 
   const RouteSearchPage({
     super.key,
     required this.origin,
     required this.destination,
     required this.date,
+    this.pickupAddress,
+    this.dropoffAddress,
   });
 
   @override
@@ -45,6 +49,24 @@ class RouteSearchPage extends StatelessWidget {
                         DateFormat('EEEE, MMMM d, yyyy').format(date),
                         style: GoogleFonts.inter(fontSize: 14, color: AppTheme.textSecondary),
                       ),
+                      if (pickupAddress != null)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 4),
+                          child: Text(
+                            'From: $pickupAddress',
+                            style: GoogleFonts.inter(fontSize: 11, color: AppTheme.textTertiary),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      if (dropoffAddress != null)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 2),
+                          child: Text(
+                            'To: $dropoffAddress',
+                            style: GoogleFonts.inter(fontSize: 11, color: AppTheme.textTertiary),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
                       if (routes.isNotEmpty)
                         Padding(
                           padding: const EdgeInsets.only(top: 4),
