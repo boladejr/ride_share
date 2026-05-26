@@ -2,16 +2,16 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 class AppTheme {
-  // Minimalist palette — soft purple accent on white
-  static const Color primaryColor = Color(0xFF6C63FF);
-  static const Color primaryLight = Color(0xFF8B85FF);
-  static const Color primaryDark = Color(0xFF1A1A2E);
-  static const Color accentColor = Color(0xFF6C63FF);
+  // Minimalist palette — dark blue accent on white
+  static const Color primaryColor = Color(0xFF0D47A1);
+  static const Color primaryLight = Color(0xFF1565C0);
+  static const Color primaryDark = Color(0xFF0A1628);
+  static const Color accentColor = Color(0xFF0D47A1);
   static const Color surfaceColor = Color(0xFFF8F9FB);
   static const Color errorColor = Color(0xFFE53935);
   static const Color successColor = Color(0xFF43A047);
 
-  static const Color seatAvailable = Color(0xFF6C63FF);
+  static const Color seatAvailable = Color(0xFF0D47A1);
   static const Color seatTaken = Color(0xFFE0E0E0);
   static const Color seatSelected = Color(0xFF1A1A2E);
   static const Color seatEmpty = Color(0xFFF0F0F0);
