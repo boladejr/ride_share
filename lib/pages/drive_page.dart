@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import '../services/auth_service.dart';
+import '../services/firebase_auth_service.dart';
 import '../models/user_model.dart';
 import '../theme.dart';
 
@@ -14,7 +14,7 @@ class DrivePage extends StatefulWidget {
 }
 
 class _DrivePageState extends State<DrivePage> {
-  final _auth = AuthService();
+  final _auth = FirebaseAuthService();
   final _nameController = TextEditingController();
   final _emailController = TextEditingController();
   final _phoneController = TextEditingController();
@@ -33,7 +33,7 @@ class _DrivePageState extends State<DrivePage> {
     super.dispose();
   }
 
-  void _submitApplication() {
+  Future<void> _submitApplication() async {
     if (_nameController.text.isEmpty ||
         _emailController.text.isEmpty ||
         _phoneController.text.isEmpty ||
@@ -52,10 +52,11 @@ class _DrivePageState extends State<DrivePage> {
     }
 
     // Sign up as driver
-    _auth.signUp(
+    await _auth.signUp(
       name: _nameController.text,
       email: _emailController.text,
       phone: _phoneController.text,
+      password: 'driver123',
       role: UserRole.driver,
     );
 

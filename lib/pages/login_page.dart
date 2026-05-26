@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import '../services/auth_service.dart';
+import '../services/firebase_auth_service.dart';
 import '../theme.dart';
 
 class LoginPage extends StatefulWidget {
@@ -18,10 +18,11 @@ class LoginPage extends StatefulWidget {
 }
 
 class _LoginPageState extends State<LoginPage> {
-  final _auth = AuthService();
+  final _auth = FirebaseAuthService();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   bool _obscurePassword = true;
+  bool _loading = false;
 
   @override
   void dispose() {
@@ -30,7 +31,7 @@ class _LoginPageState extends State<LoginPage> {
     super.dispose();
   }
 
-  void _login() {
+  Future<void> _login() async {
     if (_emailController.text.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Please enter your email')),
@@ -38,13 +39,18 @@ class _LoginPageState extends State<LoginPage> {
       return;
     }
 
-    final success = _auth.login(_emailController.text, _passwordController.text);
+    setState(() => _loading = true);
+    final success = await _auth.login(_emailController.text, _passwordController.text);
+    setState(() => _loading = false);
+
     if (success) {
       widget.onSuccess();
     } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Account not found. Try signing up instead.')),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Account not found. Try signing up instead.')),
+        );
+      }
     }
   }
 
@@ -122,8 +128,10 @@ class _LoginPageState extends State<LoginPage> {
                     width: double.infinity,
                     height: 52,
                     child: ElevatedButton(
-                      onPressed: _login,
-                      child: const Text('Log in'),
+                      onPressed: _loading ? null : _login,
+                      child: _loading
+                          ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                          : const Text('Log in'),
                     ),
                   ),
 

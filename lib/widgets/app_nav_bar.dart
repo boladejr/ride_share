@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import '../services/auth_service.dart';
+import '../services/firebase_auth_service.dart';
 import '../theme.dart';
 
 class AppNavBar extends StatelessWidget implements PreferredSizeWidget {
@@ -24,7 +24,7 @@ class AppNavBar extends StatelessWidget implements PreferredSizeWidget {
 
   @override
   Widget build(BuildContext context) {
-    final auth = AuthService();
+    final auth = FirebaseAuthService();
 
     return Container(
       height: 64,

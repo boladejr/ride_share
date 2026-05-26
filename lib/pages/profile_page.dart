@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import '../services/auth_service.dart';
+import '../services/firebase_auth_service.dart';
 import '../models/user_model.dart';
 import '../theme.dart';
 
@@ -14,7 +14,7 @@ class ProfilePage extends StatefulWidget {
 }
 
 class _ProfilePageState extends State<ProfilePage> {
-  final _auth = AuthService();
+  final _auth = FirebaseAuthService();
   bool _isEditing = false;
   late TextEditingController _nameController;
   late TextEditingController _phoneController;
@@ -37,21 +37,23 @@ class _ProfilePageState extends State<ProfilePage> {
     super.dispose();
   }
 
-  void _save() {
-    _auth.updateProfile(
+  Future<void> _save() async {
+    await _auth.updateProfile(
       name: _nameController.text,
       phone: _phoneController.text,
       address: _addressController.text.isEmpty ? null : _addressController.text,
       clearAddress: _addressController.text.isEmpty,
     );
     setState(() => _isEditing = false);
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Profile updated')),
-    );
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Profile updated')),
+      );
+    }
   }
 
-  void _logout() {
-    _auth.logout();
+  Future<void> _logout() async {
+    await _auth.logout();
     widget.onLogout();
   }
 

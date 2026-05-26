@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import '../services/auth_service.dart';
+import '../services/firebase_auth_service.dart';
 import '../models/user_model.dart';
 import '../theme.dart';
 
@@ -19,7 +19,8 @@ class SignUpPage extends StatefulWidget {
 }
 
 class _SignUpPageState extends State<SignUpPage> {
-  final _auth = AuthService();
+  final _auth = FirebaseAuthService();
+  bool _loading = false;
   final _nameController = TextEditingController();
   final _emailController = TextEditingController();
   final _phoneController = TextEditingController();
@@ -36,7 +37,7 @@ class _SignUpPageState extends State<SignUpPage> {
     super.dispose();
   }
 
-  void _signUp() {
+  Future<void> _signUp() async {
     if (_nameController.text.isEmpty ||
         _emailController.text.isEmpty ||
         _phoneController.text.isEmpty ||
@@ -47,14 +48,25 @@ class _SignUpPageState extends State<SignUpPage> {
       return;
     }
 
-    _auth.signUp(
+    setState(() => _loading = true);
+    final user = await _auth.signUp(
       name: _nameController.text,
       email: _emailController.text,
       phone: _phoneController.text,
+      password: _passwordController.text,
       role: _selectedRole,
     );
+    setState(() => _loading = false);
 
-    widget.onSuccess();
+    if (user != null) {
+      widget.onSuccess();
+    } else {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Sign up failed. Email may already be in use.')),
+        );
+      }
+    }
   }
 
   @override
@@ -159,8 +171,10 @@ class _SignUpPageState extends State<SignUpPage> {
                     width: double.infinity,
                     height: 52,
                     child: ElevatedButton(
-                      onPressed: _signUp,
-                      child: Text(_selectedRole == UserRole.driver ? 'Sign up as driver' : 'Sign up as rider'),
+                      onPressed: _loading ? null : _signUp,
+                      child: _loading
+                          ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                          : Text(_selectedRole == UserRole.driver ? 'Sign up as driver' : 'Sign up as rider'),
                     ),
                   ),
 

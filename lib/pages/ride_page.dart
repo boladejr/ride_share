@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import '../services/address_service.dart';
+import '../services/places_service.dart';
 import '../theme.dart';
 import 'route_search_page.dart';
 
@@ -13,7 +14,7 @@ class RidePage extends StatefulWidget {
 }
 
 class _RidePageState extends State<RidePage> {
-  final _addressService = AddressService();
+  final _placesService = PlacesService();
   final _pickupController = TextEditingController();
   final _dropoffController = TextEditingController();
   DateTime _selectedDate = DateTime.now();
@@ -32,20 +33,26 @@ class _RidePageState extends State<RidePage> {
     super.dispose();
   }
 
-  void _onPickupChanged(String value) {
-    setState(() {
-      _selectedPickupAddress = null;
-      _pickupSuggestions = _addressService.searchAddresses(value);
-      _showPickupSuggestions = _pickupSuggestions.isNotEmpty;
-    });
+  Future<void> _onPickupChanged(String value) async {
+    _selectedPickupAddress = null;
+    final results = await _placesService.searchAddresses(value);
+    if (mounted) {
+      setState(() {
+        _pickupSuggestions = results;
+        _showPickupSuggestions = results.isNotEmpty;
+      });
+    }
   }
 
-  void _onDropoffChanged(String value) {
-    setState(() {
-      _selectedDropoffAddress = null;
-      _dropoffSuggestions = _addressService.searchAddresses(value);
-      _showDropoffSuggestions = _dropoffSuggestions.isNotEmpty;
-    });
+  Future<void> _onDropoffChanged(String value) async {
+    _selectedDropoffAddress = null;
+    final results = await _placesService.searchAddresses(value);
+    if (mounted) {
+      setState(() {
+        _dropoffSuggestions = results;
+        _showDropoffSuggestions = results.isNotEmpty;
+      });
+    }
   }
 
   void _selectPickup(AddressSuggestion suggestion) {
@@ -86,8 +93,8 @@ class _RidePageState extends State<RidePage> {
       return;
     }
 
-    final originCity = _addressService.getCityFromAddress(_selectedPickupAddress!);
-    final destCity = _addressService.getCityFromAddress(_selectedDropoffAddress!);
+    final originCity = _placesService.getCityFromAddress(_selectedPickupAddress!) ?? '';
+    final destCity = _placesService.getCityFromAddress(_selectedDropoffAddress!) ?? '';
 
     if (originCity.isEmpty || destCity.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
