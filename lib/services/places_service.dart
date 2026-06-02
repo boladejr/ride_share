@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import '../config/places_config.dart';
 import 'address_service.dart';
 
 class PlacesService {
@@ -21,13 +22,105 @@ class PlacesService {
     'New York': 'NY',
   };
 
-  /// Free-text address autocomplete via Photon (OpenStreetMap) — keyless and
-  /// CORS-enabled, so it works directly from the web app with no API key,
-  /// billing, or Google Cloud setup. Falls back to the built-in Texas list
-  /// only if the network request fails.
+  /// Free-text address autocomplete.
+  ///
+  /// Order of preference:
+  /// 1. Google Places API (New) — when the key is configured and the project
+  ///    has billing + the API enabled.
+  /// 2. Photon (OpenStreetMap) — keyless, CORS-enabled fallback so search keeps
+  ///    working even if Google is unavailable/unbilled.
+  /// 3. Built-in Texas list — last-resort fallback if both network calls fail.
   Future<List<AddressSuggestion>> searchAddresses(String query) async {
     if (query.trim().length < 2) return [];
 
+    if (PlacesConfig.isConfigured) {
+      final google = await _searchGoogle(query);
+      if (google.isNotEmpty) return google;
+    }
+
+    final photon = await _searchPhoton(query);
+    if (photon.isNotEmpty) return photon;
+
+    return _mockAddressService.searchAddresses(query);
+  }
+
+  /// Google Places API (New) autocomplete. Supports browser CORS with an
+  /// HTTP-referrer-restricted key. Returns [] on any error so the caller can
+  /// fall back to Photon.
+  Future<List<AddressSuggestion>> _searchGoogle(String query) async {
+    try {
+      final url = Uri.https('places.googleapis.com', '/v1/places:autocomplete');
+      final response = await http.post(
+        url,
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Goog-Api-Key': PlacesConfig.apiKey,
+        },
+        body: jsonEncode({
+          'input': query,
+          'includedRegionCodes': ['us'],
+        }),
+      );
+
+      if (response.statusCode != 200) return [];
+
+      final data = jsonDecode(response.body) as Map<String, dynamic>;
+      final suggestions = data['suggestions'] as List<dynamic>? ?? [];
+
+      final results = <AddressSuggestion>[];
+      for (final suggestion in suggestions) {
+        final prediction = (suggestion as Map<String, dynamic>)['placePrediction']
+            as Map<String, dynamic>?;
+        if (prediction == null) continue;
+
+        final fullText =
+            (prediction['text'] as Map<String, dynamic>?)?['text'] as String? ??
+                '';
+        final structured =
+            prediction['structuredFormat'] as Map<String, dynamic>?;
+        final mainText =
+            (structured?['mainText'] as Map<String, dynamic>?)?['text']
+                as String?;
+        final secondaryText =
+            (structured?['secondaryText'] as Map<String, dynamic>?)?['text']
+                as String?;
+
+        final street = mainText ?? fullText.split(',').first.trim();
+        final secondaryParts = (secondaryText ?? '')
+            .split(',')
+            .map((s) => s.trim())
+            .where((s) => s.isNotEmpty)
+            .toList();
+        final city = secondaryParts.isNotEmpty ? secondaryParts[0] : '';
+        final stateZip = secondaryParts.length > 1 ? secondaryParts[1] : '';
+        final stateParts = stateZip.split(' ');
+        final state = stateParts.isNotEmpty && stateParts[0].isNotEmpty
+            ? stateParts[0]
+            : 'TX';
+        final zip = stateParts.length > 1 ? stateParts[1] : '';
+
+        results.add(AddressSuggestion(
+          fullAddress: fullText.isNotEmpty
+              ? fullText
+              : [street, city, '$state $zip'.trim()]
+                  .where((s) => s.isNotEmpty)
+                  .join(', '),
+          street: street,
+          city: city,
+          state: state,
+          zip: zip,
+        ));
+      }
+      return results;
+    } catch (_) {
+      return [];
+    }
+  }
+
+  /// Photon (OpenStreetMap) autocomplete — keyless and CORS-enabled, so it
+  /// works directly from the web app with no API key, billing, or Google Cloud
+  /// setup. Returns [] on any error.
+  Future<List<AddressSuggestion>> _searchPhoton(String query) async {
     try {
       final url = Uri.https('photon.komoot.io', '/api/', {
         'q': query,
@@ -39,9 +132,7 @@ class PlacesService {
       });
 
       final response = await http.get(url);
-      if (response.statusCode != 200) {
-        return _mockAddressService.searchAddresses(query);
-      }
+      if (response.statusCode != 200) return [];
 
       final data = jsonDecode(response.body) as Map<String, dynamic>;
       final features = data['features'] as List<dynamic>? ?? [];
@@ -49,8 +140,8 @@ class PlacesService {
       final results = <AddressSuggestion>[];
       final seen = <String>{};
       for (final feature in features) {
-        final props =
-            (feature as Map<String, dynamic>)['properties'] as Map<String, dynamic>?;
+        final props = (feature as Map<String, dynamic>)['properties']
+            as Map<String, dynamic>?;
         if (props == null) continue;
 
         // Only surface US results for this Texas-focused rideshare.
@@ -60,15 +151,13 @@ class PlacesService {
         final houseNumber = props['housenumber'] as String?;
         final road = props['street'] as String?;
         final name = props['name'] as String?;
-        final city = (props['city'] ?? props['locality'] ?? props['county'])
-            as String?;
+        final city =
+            (props['city'] ?? props['locality'] ?? props['county']) as String?;
         final stateRaw = props['state'] as String?;
-        final state = stateRaw != null
-            ? (_stateAbbr[stateRaw] ?? stateRaw)
-            : '';
+        final state =
+            stateRaw != null ? (_stateAbbr[stateRaw] ?? stateRaw) : '';
         final zip = props['postcode'] as String? ?? '';
 
-        // Build a clean street line: "1100 Congress Ave" or the POI name.
         String street;
         if (road != null && road.isNotEmpty) {
           street = houseNumber != null && houseNumber.isNotEmpty
@@ -98,13 +187,9 @@ class PlacesService {
           zip: zip,
         ));
       }
-
-      // If Photon returned nothing useful, fall back to the built-in list.
-      return results.isNotEmpty
-          ? results
-          : _mockAddressService.searchAddresses(query);
+      return results;
     } catch (_) {
-      return _mockAddressService.searchAddresses(query);
+      return [];
     }
   }
 
