@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../widgets/app_nav_bar.dart';
+import '../services/firebase_auth_service.dart';
 import 'rideshare_page.dart';
 import 'ride_page.dart';
 import 'drive_page.dart';
@@ -94,11 +95,12 @@ class _AppShellState extends State<AppShell> {
     );
   }
 
-  void _openProfile() {
+  void _openProfile({bool scrollToBookings = false}) {
     Navigator.push(
       context,
       MaterialPageRoute(
         builder: (_) => ProfilePage(
+          scrollToBookings: scrollToBookings,
           onLogout: () {
             Navigator.pop(context);
             setState(() {});
@@ -106,6 +108,11 @@ class _AppShellState extends State<AppShell> {
         ),
       ),
     );
+  }
+
+  Future<void> _logout() async {
+    await FirebaseAuthService().logout();
+    if (mounted) setState(() {});
   }
 
   @override
@@ -120,6 +127,8 @@ class _AppShellState extends State<AppShell> {
             onLoginTap: _openLogin,
             onSignUpTap: _openSignUp,
             onProfileTap: _openProfile,
+            onTripsTap: () => _openProfile(scrollToBookings: true),
+            onLogoutTap: _logout,
           ),
           Expanded(
             child: _buildPage(),

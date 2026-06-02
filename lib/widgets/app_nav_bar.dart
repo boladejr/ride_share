@@ -9,6 +9,8 @@ class AppNavBar extends StatelessWidget implements PreferredSizeWidget {
   final VoidCallback onLoginTap;
   final VoidCallback onSignUpTap;
   final VoidCallback? onProfileTap;
+  final VoidCallback? onTripsTap;
+  final VoidCallback? onLogoutTap;
 
   const AppNavBar({
     super.key,
@@ -17,6 +19,8 @@ class AppNavBar extends StatelessWidget implements PreferredSizeWidget {
     required this.onLoginTap,
     required this.onSignUpTap,
     this.onProfileTap,
+    this.onTripsTap,
+    this.onLogoutTap,
   });
 
   @override
@@ -57,9 +61,50 @@ class AppNavBar extends StatelessWidget implements PreferredSizeWidget {
               const Spacer(),
               // Right side
               if (auth.isLoggedIn) ...[
-                InkWell(
-                  onTap: onProfileTap,
-                  borderRadius: BorderRadius.circular(20),
+                _navItem('My Trips', 1, false, onTapOverride: onTripsTap),
+                const SizedBox(width: 8),
+                PopupMenuButton<String>(
+                  tooltip: 'Account',
+                  offset: const Offset(0, 48),
+                  onSelected: (value) {
+                    switch (value) {
+                      case 'trips':
+                        onTripsTap?.call();
+                        break;
+                      case 'profile':
+                        onProfileTap?.call();
+                        break;
+                      case 'logout':
+                        onLogoutTap?.call();
+                        break;
+                    }
+                  },
+                  itemBuilder: (context) => [
+                    const PopupMenuItem(
+                      value: 'trips',
+                      child: ListTile(
+                        leading: Icon(Icons.confirmation_number_outlined),
+                        title: Text('My Trips'),
+                        contentPadding: EdgeInsets.zero,
+                      ),
+                    ),
+                    const PopupMenuItem(
+                      value: 'profile',
+                      child: ListTile(
+                        leading: Icon(Icons.person_outline),
+                        title: Text('Profile'),
+                        contentPadding: EdgeInsets.zero,
+                      ),
+                    ),
+                    const PopupMenuItem(
+                      value: 'logout',
+                      child: ListTile(
+                        leading: Icon(Icons.logout),
+                        title: Text('Log out'),
+                        contentPadding: EdgeInsets.zero,
+                      ),
+                    ),
+                  ],
                   child: Container(
                     padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                     child: Row(
@@ -86,6 +131,7 @@ class AppNavBar extends StatelessWidget implements PreferredSizeWidget {
                             color: Colors.white,
                           ),
                         ),
+                        const Icon(Icons.arrow_drop_down, color: Colors.white, size: 20),
                       ],
                     ),
                   ),
@@ -129,9 +175,9 @@ class AppNavBar extends StatelessWidget implements PreferredSizeWidget {
     );
   }
 
-  Widget _navItem(String label, int index, bool isActive) {
+  Widget _navItem(String label, int index, bool isActive, {VoidCallback? onTapOverride}) {
     return InkWell(
-      onTap: () => onNavTap(index),
+      onTap: onTapOverride ?? () => onNavTap(index),
       borderRadius: BorderRadius.circular(24),
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),

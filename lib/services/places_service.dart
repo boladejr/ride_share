@@ -12,46 +12,72 @@ class PlacesService {
   bool get _usePlaces => PlacesConfig.isConfigured;
 
   Future<List<AddressSuggestion>> searchAddresses(String query) async {
+    if (query.trim().length < 2) return [];
+
     if (!_usePlaces) {
       return _mockAddressService.searchAddresses(query);
     }
 
-    if (query.length < 2) return [];
-
     try {
-      final url = Uri.https(
-        'maps.googleapis.com',
-        '/maps/api/place/autocomplete/json',
-        {
-          'input': query,
-          'components': 'country:us',
-          'types': 'address',
-          'key': PlacesConfig.apiKey,
+      // Places API (New) Autocomplete — supports CORS so it can be called
+      // directly from the web app with an HTTP-referrer-restricted key.
+      final url = Uri.https('places.googleapis.com', '/v1/places:autocomplete');
+      final response = await http.post(
+        url,
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Goog-Api-Key': PlacesConfig.apiKey,
         },
+        body: jsonEncode({
+          'input': query,
+          'includedRegionCodes': ['us'],
+        }),
       );
 
-      final response = await http.get(url);
       if (response.statusCode != 200) {
         return _mockAddressService.searchAddresses(query);
       }
 
       final data = jsonDecode(response.body) as Map<String, dynamic>;
-      final predictions = data['predictions'] as List<dynamic>? ?? [];
+      final suggestions = data['suggestions'] as List<dynamic>? ?? [];
 
       final results = <AddressSuggestion>[];
-      for (final prediction in predictions) {
-        final description = prediction['description'] as String? ?? '';
-        final parts = description.split(',').map((s) => s.trim()).toList();
+      for (final suggestion in suggestions) {
+        final prediction =
+            (suggestion as Map<String, dynamic>)['placePrediction']
+                as Map<String, dynamic>?;
+        if (prediction == null) continue;
 
-        final street = parts.isNotEmpty ? parts[0] : description;
-        final city = parts.length > 1 ? parts[1] : '';
-        final stateZip = parts.length > 2 ? parts[2] : '';
+        final fullText =
+            (prediction['text'] as Map<String, dynamic>?)?['text'] as String? ??
+                '';
+        final structured =
+            prediction['structuredFormat'] as Map<String, dynamic>?;
+        final mainText = (structured?['mainText']
+            as Map<String, dynamic>?)?['text'] as String?;
+        final secondaryText = (structured?['secondaryText']
+            as Map<String, dynamic>?)?['text'] as String?;
+
+        final street = mainText ?? fullText.split(',').first.trim();
+        final secondaryParts = (secondaryText ?? '')
+            .split(',')
+            .map((s) => s.trim())
+            .where((s) => s.isNotEmpty)
+            .toList();
+        final city = secondaryParts.isNotEmpty ? secondaryParts[0] : '';
+        final stateZip = secondaryParts.length > 1 ? secondaryParts[1] : '';
         final stateParts = stateZip.split(' ');
-        final state = stateParts.isNotEmpty ? stateParts[0] : 'TX';
+        final state = stateParts.isNotEmpty && stateParts[0].isNotEmpty
+            ? stateParts[0]
+            : 'TX';
         final zip = stateParts.length > 1 ? stateParts[1] : '';
 
         results.add(AddressSuggestion(
-          fullAddress: description,
+          fullAddress: fullText.isNotEmpty
+              ? fullText
+              : [street, city, '$state $zip'.trim()]
+                  .where((s) => s.isNotEmpty)
+                  .join(', '),
           street: street,
           city: city,
           state: state,

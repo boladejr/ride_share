@@ -8,8 +8,9 @@ import '../theme.dart';
 
 class ProfilePage extends StatefulWidget {
   final VoidCallback onLogout;
+  final bool scrollToBookings;
 
-  const ProfilePage({super.key, required this.onLogout});
+  const ProfilePage({super.key, required this.onLogout, this.scrollToBookings = false});
 
   @override
   State<ProfilePage> createState() => _ProfilePageState();
@@ -22,6 +23,9 @@ class _ProfilePageState extends State<ProfilePage> {
   late TextEditingController _nameController;
   late TextEditingController _phoneController;
   late TextEditingController _addressController;
+
+  final _scrollController = ScrollController();
+  final _bookingsKey = GlobalKey();
 
   List<Map<String, dynamic>> _bookings = [];
   bool _loadingBookings = true;
@@ -36,6 +40,18 @@ class _ProfilePageState extends State<ProfilePage> {
     _loadBookings();
   }
 
+  void _maybeScrollToBookings() {
+    if (!widget.scrollToBookings) return;
+    final ctx = _bookingsKey.currentContext;
+    if (ctx != null) {
+      Scrollable.ensureVisible(
+        ctx,
+        duration: const Duration(milliseconds: 400),
+        curve: Curves.easeInOut,
+      );
+    }
+  }
+
   Future<void> _loadBookings() async {
     final user = _auth.currentUser;
     if (user == null) return;
@@ -47,6 +63,7 @@ class _ProfilePageState extends State<ProfilePage> {
           _bookings = bookings;
           _loadingBookings = false;
         });
+        WidgetsBinding.instance.addPostFrameCallback((_) => _maybeScrollToBookings());
       }
     } catch (_) {
       if (mounted) {
@@ -60,6 +77,7 @@ class _ProfilePageState extends State<ProfilePage> {
     _nameController.dispose();
     _phoneController.dispose();
     _addressController.dispose();
+    _scrollController.dispose();
     super.dispose();
   }
 
@@ -98,6 +116,7 @@ class _ProfilePageState extends State<ProfilePage> {
         title: Text('RideShare', style: GoogleFonts.inter(fontWeight: FontWeight.w800)),
       ),
       body: SingleChildScrollView(
+        controller: _scrollController,
         child: Column(
           children: [
             // Header
@@ -207,6 +226,7 @@ class _ProfilePageState extends State<ProfilePage> {
 
             // My Bookings section
             Padding(
+              key: _bookingsKey,
               padding: const EdgeInsets.symmetric(horizontal: 24),
               child: ConstrainedBox(
                 constraints: const BoxConstraints(maxWidth: 500),
