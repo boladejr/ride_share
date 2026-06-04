@@ -16,6 +16,8 @@ class BookingModel {
   final TripStatus tripStatus;
   final PaymentStatus paymentStatus;
   final DateTime bookingDate;
+  final String? assignedDriverId;
+  final String? assignedDriverName;
 
   BookingModel({
     required this.id,
@@ -31,6 +33,8 @@ class BookingModel {
     required this.tripStatus,
     required this.paymentStatus,
     required this.bookingDate,
+    this.assignedDriverId,
+    this.assignedDriverName,
   });
 
   BookingModel copyWith({
@@ -47,6 +51,8 @@ class BookingModel {
     TripStatus? tripStatus,
     PaymentStatus? paymentStatus,
     DateTime? bookingDate,
+    String? assignedDriverId,
+    String? assignedDriverName,
   }) {
     return BookingModel(
       id: id ?? this.id,
@@ -62,6 +68,8 @@ class BookingModel {
       tripStatus: tripStatus ?? this.tripStatus,
       paymentStatus: paymentStatus ?? this.paymentStatus,
       bookingDate: bookingDate ?? this.bookingDate,
+      assignedDriverId: assignedDriverId ?? this.assignedDriverId,
+      assignedDriverName: assignedDriverName ?? this.assignedDriverName,
     );
   }
 }

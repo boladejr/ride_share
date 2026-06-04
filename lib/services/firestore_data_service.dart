@@ -35,6 +35,8 @@ class FirestoreDataService {
     String? destination,
     List<int>? seatNumbers,
     DateTime? departureTime,
+    String? assignedDriverId,
+    String? assignedDriverName,
   }) async {
     if (!_useFirestore) return;
     _init();
@@ -51,6 +53,8 @@ class FirestoreDataService {
       'destination': destination,
       'seatNumbers': seatNumbers,
       'departureTime': departureTime != null ? Timestamp.fromDate(departureTime) : null,
+      'assignedDriverId': assignedDriverId,
+      'assignedDriverName': assignedDriverName,
       'status': 'confirmed',
       'createdAt': FieldValue.serverTimestamp(),
     });

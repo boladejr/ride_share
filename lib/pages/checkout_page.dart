@@ -69,6 +69,8 @@ class _CheckoutPageState extends State<CheckoutPage> {
           destination: widget.route.destination,
           seatNumbers: widget.selectedSeats,
           departureTime: widget.route.departureTime,
+          assignedDriverId: booking.assignedDriverId,
+          assignedDriverName: booking.assignedDriverName,
         );
       } catch (_) {
         // Firestore save failed; booking still proceeds via mock service

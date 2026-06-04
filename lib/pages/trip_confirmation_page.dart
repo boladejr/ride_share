@@ -217,6 +217,11 @@ class _TripConfirmationPageState extends State<TripConfirmationPage> {
 
             const SizedBox(height: 16),
 
+            // Your Driver
+            _driverCard(booking),
+
+            const SizedBox(height: 16),
+
             // Pickup Point
             Container(
               width: double.infinity,
@@ -489,6 +494,77 @@ class _TripConfirmationPageState extends State<TripConfirmationPage> {
           child: Text(text, style: GoogleFonts.inter(fontSize: 13, color: AppTheme.textSecondary)),
         ),
       ],
+    );
+  }
+
+  Widget _driverCard(BookingModel booking) {
+    final assigned = booking.assignedDriverName != null;
+    final driver = booking.assignedDriverId != null
+        ? _dataService.getDriverById(booking.assignedDriverId!)
+        : null;
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppTheme.borderColor),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Your Driver',
+            style: GoogleFonts.inter(
+              fontSize: 16,
+              fontWeight: FontWeight.w700,
+              color: AppTheme.primaryDark,
+            ),
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              CircleAvatar(
+                radius: 22,
+                backgroundColor: AppTheme.primaryColor.withValues(alpha: 0.1),
+                child: Icon(
+                  assigned ? Icons.person : Icons.hourglass_empty,
+                  color: AppTheme.primaryColor,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      assigned
+                          ? booking.assignedDriverName!
+                          : 'Pending assignment',
+                      style: GoogleFonts.inter(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w600,
+                        color: AppTheme.primaryDark,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      assigned
+                          ? (driver?.phone ?? 'Driver assigned')
+                          : "We'll notify you when a driver is assigned",
+                      style: GoogleFonts.inter(
+                        fontSize: 13,
+                        color: AppTheme.textSecondary,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
     );
   }
 

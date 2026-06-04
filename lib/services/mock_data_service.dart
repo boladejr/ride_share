@@ -252,6 +252,8 @@ class MockDataService {
     required List<int> seatNumbers,
     required double totalPrice,
   }) {
+    // Ensure the route has a driver before confirming the booking.
+    final driver = assignDriverForRoute(routeId);
     final route = getRouteById(routeId)!;
     final booking = BookingModel(
       id: 'BK-${_uuid.v4().substring(0, 6).toUpperCase()}',
@@ -267,6 +269,8 @@ class MockDataService {
       tripStatus: TripStatus.notStarted,
       paymentStatus: PaymentStatus.paid,
       bookingDate: DateTime.now(),
+      assignedDriverId: driver?.id,
+      assignedDriverName: driver?.name,
     );
     _bookings.add(booking);
     bookSeats(routeId, seatNumbers);
@@ -315,6 +319,51 @@ class MockDataService {
         assignedRouteIds: [...driver.assignedRouteIds, routeId],
       );
     }
+  }
+
+  /// v1 driver-assignment algorithm.
+  ///
+  /// Ensures [routeId] has a driver and returns the assigned driver:
+  /// - If the route already has a driver, that driver is kept.
+  /// - Otherwise, among drivers with no time-conflicting route, the one with
+  ///   the fewest current assignments is chosen (load-balanced), with a
+  ///   deterministic tie-break by id.
+  /// - Returns null if no driver is eligible (route stays pending).
+  DriverModel? assignDriverForRoute(String routeId) {
+    final route = getRouteById(routeId);
+    if (route == null) return null;
+
+    if (route.assignedDriverId != null) {
+      return getDriverById(route.assignedDriverId!);
+    }
+
+    final candidates =
+        _drivers.where((d) => !_hasTimeConflict(d, route)).toList()
+          ..sort((a, b) {
+            final byLoad =
+                a.assignedRouteIds.length.compareTo(b.assignedRouteIds.length);
+            return byLoad != 0 ? byLoad : a.id.compareTo(b.id);
+          });
+
+    if (candidates.isEmpty) return null;
+
+    final chosen = candidates.first;
+    assignDriverToRoute(chosen.id, routeId);
+    return getDriverById(chosen.id);
+  }
+
+  /// True if [driver] already has a route whose time window overlaps [newRoute].
+  bool _hasTimeConflict(DriverModel driver, RouteModel newRoute) {
+    final bStart = newRoute.departureTime;
+    final bEnd = newRoute.departureTime.add(newRoute.duration);
+    for (final routeId in driver.assignedRouteIds) {
+      final r = getRouteById(routeId);
+      if (r == null) continue;
+      final aStart = r.departureTime;
+      final aEnd = r.departureTime.add(r.duration);
+      if (aStart.isBefore(bEnd) && bStart.isBefore(aEnd)) return true;
+    }
+    return false;
   }
 
   // Trip status operations
