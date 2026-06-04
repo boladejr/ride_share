@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import '../models/route_model.dart';
-import '../services/mock_data_service.dart';
+import '../services/firestore_data_service.dart';
 import '../theme.dart';
 import 'seat_selection_page.dart';
 
@@ -24,15 +24,19 @@ class RouteSearchPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final dataService = MockDataService();
-    final routes = dataService.searchRoutes(origin, destination, date);
-
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
         title: Text('$origin → $destination'),
       ),
-      body: Column(
+      body: FutureBuilder<List<RouteModel>>(
+        future: FirestoreDataService().searchRoutes(origin, destination, date),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          }
+          final routes = snapshot.data ?? [];
+          return Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // Date + results count header
@@ -133,7 +137,9 @@ class RouteSearchPage extends StatelessWidget {
                     },
                   ),
           ),
-        ],
+            ],
+          );
+        },
       ),
     );
   }

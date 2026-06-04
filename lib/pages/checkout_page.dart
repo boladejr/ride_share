@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
+import '../models/booking_model.dart';
 import '../models/route_model.dart';
-import '../services/mock_data_service.dart';
 import '../services/firebase_auth_service.dart';
 import '../services/firestore_data_service.dart';
 import '../theme.dart';
@@ -23,7 +23,7 @@ class CheckoutPage extends StatefulWidget {
 }
 
 class _CheckoutPageState extends State<CheckoutPage> {
-  final _dataService = MockDataService();
+  final _dataService = FirestoreDataService();
   final _cardNumberController = TextEditingController();
   final _expiryController = TextEditingController();
   final _cvvController = TextEditingController();
@@ -48,33 +48,45 @@ class _CheckoutPageState extends State<CheckoutPage> {
     // Simulate Stripe payment processing
     await Future.delayed(const Duration(seconds: 2));
 
-    // Create booking in mock service
-    final booking = _dataService.createBooking(
-      routeId: widget.route.id,
-      seatNumbers: widget.selectedSeats,
-      totalPrice: _totalPrice,
-    );
-
-    // Also save to Firestore for persistence
     final auth = FirebaseAuthService();
-    if (auth.isLoggedIn && auth.currentUser != null) {
-      try {
-        await FirestoreDataService().saveBooking(
-          userId: auth.currentUser!.id,
-          routeId: widget.route.id,
-          seats: widget.selectedSeats.length,
-          totalPrice: _totalPrice,
-          pickupAddress: widget.route.pickupPoint,
-          origin: widget.route.origin,
-          destination: widget.route.destination,
-          seatNumbers: widget.selectedSeats,
-          departureTime: widget.route.departureTime,
-          assignedDriverId: booking.assignedDriverId,
-          assignedDriverName: booking.assignedDriverName,
-        );
-      } catch (_) {
-        // Firestore save failed; booking still proceeds via mock service
-      }
+    final riderId = auth.currentUser?.id ?? 'guest';
+    final riderName =
+        auth.currentUser?.name ?? (_nameController.text.trim().isNotEmpty
+            ? _nameController.text.trim()
+            : 'Guest');
+
+    BookingModel booking;
+    try {
+      // Atomically re-checks seat availability, marks seats taken, assigns a
+      // driver, and writes the booking — shared across all users.
+      booking = await _dataService.createBooking(
+        routeId: widget.route.id,
+        seatNumbers: widget.selectedSeats,
+        totalPrice: _totalPrice,
+        riderId: riderId,
+        riderName: riderName,
+        pickupAddress: widget.route.pickupPoint,
+      );
+    } on SeatUnavailableException catch (e) {
+      if (!mounted) return;
+      setState(() => _processing = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Seat${e.seats.length > 1 ? 's' : ''} ${e.seats.join(', ')} '
+            'just got booked. Please pick another seat.',
+          ),
+        ),
+      );
+      Navigator.pop(context); // back to seat selection to reselect
+      return;
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _processing = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Booking failed. Please try again.')),
+      );
+      return;
     }
 
     if (!mounted) return;
@@ -84,7 +96,7 @@ class _CheckoutPageState extends State<CheckoutPage> {
     Navigator.pushAndRemoveUntil(
       context,
       MaterialPageRoute(
-        builder: (_) => TripConfirmationPage(bookingId: booking.id),
+        builder: (_) => TripConfirmationPage(booking: booking),
       ),
       (route) => route.isFirst,
     );

@@ -1,4 +1,3 @@
-import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
@@ -6,39 +5,10 @@ import '../models/booking_model.dart';
 import '../services/mock_data_service.dart';
 import '../theme.dart';
 
-class TripConfirmationPage extends StatefulWidget {
-  final String bookingId;
+class TripConfirmationPage extends StatelessWidget {
+  final BookingModel booking;
 
-  const TripConfirmationPage({super.key, required this.bookingId});
-
-  @override
-  State<TripConfirmationPage> createState() => _TripConfirmationPageState();
-}
-
-class _TripConfirmationPageState extends State<TripConfirmationPage> {
-  final _dataService = MockDataService();
-  late BookingModel? _booking;
-  Timer? _statusTimer;
-
-  @override
-  void initState() {
-    super.initState();
-    _booking = _dataService.getBookingById(widget.bookingId);
-    // Simulate real-time status updates
-    _statusTimer = Timer.periodic(const Duration(seconds: 5), (_) {
-      if (mounted) {
-        setState(() {
-          _booking = _dataService.getBookingById(widget.bookingId);
-        });
-      }
-    });
-  }
-
-  @override
-  void dispose() {
-    _statusTimer?.cancel();
-    super.dispose();
-  }
+  const TripConfirmationPage({super.key, required this.booking});
 
   Color _statusColor(TripStatus status) {
     switch (status) {
@@ -75,15 +45,6 @@ class _TripConfirmationPageState extends State<TripConfirmationPage> {
 
   @override
   Widget build(BuildContext context) {
-    if (_booking == null) {
-      return Scaffold(
-        appBar: AppBar(title: const Text('Booking Not Found')),
-        body: const Center(child: Text('Booking not found')),
-      );
-    }
-
-    final booking = _booking!;
-
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
@@ -500,7 +461,7 @@ class _TripConfirmationPageState extends State<TripConfirmationPage> {
   Widget _driverCard(BookingModel booking) {
     final assigned = booking.assignedDriverName != null;
     final driver = booking.assignedDriverId != null
-        ? _dataService.getDriverById(booking.assignedDriverId!)
+        ? MockDataService().getDriverById(booking.assignedDriverId!)
         : null;
 
     return Container(
