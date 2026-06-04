@@ -14,6 +14,10 @@ class SeatUnavailableException implements Exception {
   String toString() => 'Seats already taken: ${seats.join(', ')}';
 }
 
+/// Seat inventory is the only thing persisted/shared via Firestore (collection
+/// `route_seats`). Routes, drivers, and driver assignment stay in the in-memory
+/// [MockDataService]. This keeps seat reservation atomic across all riders —
+/// preventing double-booking — without migrating the whole catalog.
 class FirestoreDataService {
   static final FirestoreDataService _instance = FirestoreDataService._internal();
   factory FirestoreDataService() => _instance;
@@ -28,161 +32,53 @@ class FirestoreDataService {
     _firestore ??= FirebaseFirestore.instance;
   }
 
-  // ---------------------------------------------------------------------------
-  // Seeding: copy the built-in demo routes/drivers into Firestore once, so the
-  // catalog is persistent and shared across all users. Idempotent — only runs
-  // when the `routes` collection is empty, and uses fixed doc ids.
-  // ---------------------------------------------------------------------------
-  bool _seeded = false;
+  CollectionReference<Map<String, dynamic>> get _seats =>
+      _firestore!.collection('route_seats');
 
-  Future<void> ensureSeeded() async {
-    if (!_useFirestore || _seeded) return;
-    _init();
-    final existing = await _firestore!.collection('routes').limit(1).get();
-    if (existing.docs.isEmpty) {
-      final batch = _firestore!.batch();
-      for (final route in _mockService.routes) {
-        batch.set(
-          _firestore!.collection('routes').doc(route.id),
-          _routeToMap(route, _mockService.getTakenSeats(route.id)),
-        );
-      }
-      for (final driver in _mockService.drivers) {
-        batch.set(
-          _firestore!.collection('drivers').doc(driver.id),
-          _driverToMap(driver),
-        );
-      }
-      await batch.commit();
-    }
-    _seeded = true;
-  }
-
-  Map<String, dynamic> _routeToMap(RouteModel r, Set<int> takenSeats) => {
-        'origin': r.origin,
-        'destination': r.destination,
-        'departureTime': Timestamp.fromDate(r.departureTime),
-        'durationMinutes': r.duration.inMinutes,
-        'totalSeats': r.totalSeats,
-        'availableSeats': r.availableSeats,
-        'pricePerSeat': r.pricePerSeat,
-        'pickupPoint': r.pickupPoint,
-        'assignedDriverId': r.assignedDriverId,
-        'takenSeats': takenSeats.toList(),
-      };
-
-  Map<String, dynamic> _driverToMap(DriverModel d) => {
-        'name': d.name,
-        'email': d.email,
-        'phone': d.phone,
-        'assignedRouteIds': d.assignedRouteIds,
-        'totalPayout': d.totalPayout,
-      };
-
-  RouteModel _routeFromDoc(String id, Map<String, dynamic> data) => RouteModel(
-        id: id,
-        origin: data['origin'] as String? ?? '',
-        destination: data['destination'] as String? ?? '',
-        departureTime:
-            (data['departureTime'] as Timestamp?)?.toDate() ?? DateTime.now(),
-        duration: Duration(minutes: (data['durationMinutes'] as num?)?.toInt() ?? 0),
-        totalSeats: (data['totalSeats'] as num?)?.toInt() ?? 0,
-        availableSeats: (data['availableSeats'] as num?)?.toInt() ?? 0,
-        pricePerSeat: (data['pricePerSeat'] as num?)?.toDouble() ?? 0,
-        pickupPoint: data['pickupPoint'] as String? ?? '',
-        assignedDriverId: data['assignedDriverId'] as String?,
-      );
-
-  DriverModel _driverFromDoc(String id, Map<String, dynamic> data) => DriverModel(
-        id: id,
-        name: data['name'] as String? ?? '',
-        email: data['email'] as String? ?? '',
-        phone: data['phone'] as String? ?? '',
-        assignedRouteIds:
-            (data['assignedRouteIds'] as List?)?.map((e) => e as String).toList() ??
-                [],
-        totalPayout: (data['totalPayout'] as num?)?.toDouble() ?? 0,
-      );
-
-  Set<int> _takenSeatsFrom(Map<String, dynamic> data) =>
-      (data['takenSeats'] as List?)?.map((e) => (e as num).toInt()).toSet() ?? {};
+  Set<int> _seatsFrom(Map<String, dynamic>? data) =>
+      (data?['takenSeats'] as List?)?.map((e) => (e as num).toInt()).toSet() ??
+      {};
 
   // ---------------------------------------------------------------------------
   // Reads
   // ---------------------------------------------------------------------------
+
+  /// Routes from the mock catalog, with `availableSeats` adjusted to reflect the
+  /// live (shared) seat reservations stored in Firestore.
   Future<List<RouteModel>> searchRoutes(
       String origin, String destination, DateTime date) async {
-    if (!_useFirestore) {
-      return _mockService.searchRoutes(origin, destination, date);
-    }
+    final routes = _mockService.searchRoutes(origin, destination, date);
+    if (!_useFirestore) return routes;
     _init();
-    await ensureSeeded();
-    final snap = await _firestore!.collection('routes').get();
-    final routes = snap.docs.map((d) => _routeFromDoc(d.id, d.data())).where((r) {
-      final matchOrigin = origin.isEmpty ||
-          r.origin.toLowerCase().contains(origin.toLowerCase());
-      final matchDest = destination.isEmpty ||
-          r.destination.toLowerCase().contains(destination.toLowerCase());
-      return matchOrigin && matchDest;
-    }).toList()
-      ..sort((a, b) => a.departureTime.compareTo(b.departureTime));
-    return routes;
+
+    final snap = await _seats.get();
+    final takenByRoute = <String, Set<int>>{
+      for (final doc in snap.docs) doc.id: _seatsFrom(doc.data()),
+    };
+
+    return routes.map((r) {
+      final taken = {..._mockService.getTakenSeats(r.id), ...?takenByRoute[r.id]};
+      final available = (r.totalSeats - taken.length).clamp(0, r.totalSeats);
+      return r.copyWith(availableSeats: available);
+    }).toList();
   }
 
+  /// Live taken seats = demo's pre-taken seats merged with Firestore reservations.
   Future<Set<int>> getTakenSeats(String routeId) async {
-    if (!_useFirestore) return _mockService.getTakenSeats(routeId);
+    final seed = _mockService.getTakenSeats(routeId);
+    if (!_useFirestore) return seed;
     _init();
-    final doc = await _firestore!.collection('routes').doc(routeId).get();
-    if (!doc.exists) return {};
-    return _takenSeatsFrom(doc.data()!);
+    final doc = await _seats.doc(routeId).get();
+    return {...seed, ..._seatsFrom(doc.data())};
   }
 
-  Future<DriverModel?> getDriverById(String id) async {
-    if (!_useFirestore) return _mockService.getDriverById(id);
-    _init();
-    final doc = await _firestore!.collection('drivers').doc(id).get();
-    if (!doc.exists) return null;
-    return _driverFromDoc(doc.id, doc.data()!);
-  }
+  Future<DriverModel?> getDriverById(String id) async =>
+      _mockService.getDriverById(id);
 
   // ---------------------------------------------------------------------------
-  // Driver-assignment algorithm (v1): eligible = no time-conflicting route;
-  // ordered by fewest current assignments (load-balanced), tie-break by id.
-  // ---------------------------------------------------------------------------
-  List<DriverModel> _eligibleDrivers(
-      RouteModel route, List<RouteModel> allRoutes, List<DriverModel> drivers) {
-    final bStart = route.departureTime;
-    final bEnd = route.departureTime.add(route.duration);
-
-    RouteModel? routeById(String id) {
-      for (final r in allRoutes) {
-        if (r.id == id) return r;
-      }
-      return null;
-    }
-
-    bool conflict(DriverModel d) {
-      for (final rid in d.assignedRouteIds) {
-        final r = routeById(rid);
-        if (r == null) continue;
-        final aStart = r.departureTime;
-        final aEnd = r.departureTime.add(r.duration);
-        if (aStart.isBefore(bEnd) && bStart.isBefore(aEnd)) return true;
-      }
-      return false;
-    }
-
-    return drivers.where((d) => !conflict(d)).toList()
-      ..sort((a, b) {
-        final byLoad = a.assignedRouteIds.length.compareTo(b.assignedRouteIds.length);
-        return byLoad != 0 ? byLoad : a.id.compareTo(b.id);
-      });
-  }
-
-  // ---------------------------------------------------------------------------
-  // Transactional booking: atomically re-checks seat availability, marks the
-  // seats taken, decrements availableSeats, assigns a driver, and writes the
-  // booking — so concurrent riders can't grab the same seat.
+  // Transactional booking: atomically re-checks seat availability and marks the
+  // requested seats taken in Firestore, so concurrent riders can't grab the same
+  // seat. Driver assignment runs through the in-memory mock algorithm.
   // ---------------------------------------------------------------------------
   Future<BookingModel> createBooking({
     required String routeId,
@@ -194,6 +90,14 @@ class FirestoreDataService {
     String? dropoffAddress,
     String? paymentIntentId,
   }) async {
+    final route = _mockService.getRouteById(routeId);
+    if (route == null) {
+      throw Exception('Route not found');
+    }
+
+    // Driver assignment stays in the mock (in-memory, load-balanced v1).
+    final driver = _mockService.assignDriverForRoute(routeId);
+
     if (!_useFirestore) {
       return _mockService.createBooking(
         routeId: routeId,
@@ -202,97 +106,75 @@ class FirestoreDataService {
       );
     }
     _init();
-    await ensureSeeded();
 
-    // Pre-read current routes + drivers to compute the load-balanced candidate
-    // ordering (queries aren't allowed inside a transaction).
-    final routesSnap = await _firestore!.collection('routes').get();
-    final driversSnap = await _firestore!.collection('drivers').get();
-    final allRoutes =
-        routesSnap.docs.map((d) => _routeFromDoc(d.id, d.data())).toList();
-    final allDrivers =
-        driversSnap.docs.map((d) => _driverFromDoc(d.id, d.data())).toList();
-    final driverNameById = {for (final d in allDrivers) d.id: d.name};
+    final seed = _mockService.getTakenSeats(routeId);
+    final seatRef = _seats.doc(routeId);
 
-    final routeRef = _firestore!.collection('routes').doc(routeId);
-    final bookingRef = _firestore!.collection('bookings').doc();
-
-    return _firestore!.runTransaction<BookingModel>((tx) async {
-      final routeSnap = await tx.get(routeRef);
-      if (!routeSnap.exists) {
-        throw Exception('Route not found');
-      }
-      final data = routeSnap.data()!;
-      final taken = _takenSeatsFrom(data);
+    // Reserve the seats atomically.
+    await _firestore!.runTransaction((tx) async {
+      final doc = await tx.get(seatRef);
+      final taken = {...seed, ..._seatsFrom(doc.data())};
 
       final conflicts = seatNumbers.where(taken.contains).toList()..sort();
       if (conflicts.isNotEmpty) {
         throw SeatUnavailableException(conflicts);
       }
 
-      // Resolve the driver: keep an existing assignment, otherwise pick the
-      // best eligible candidate from the pre-read ordering.
-      String? driverId = data['assignedDriverId'] as String?;
-      if (driverId == null) {
-        final route = _routeFromDoc(routeId, data);
-        final candidates = _eligibleDrivers(route, allRoutes, allDrivers);
-        if (candidates.isNotEmpty) {
-          driverId = candidates.first.id;
-          tx.update(_firestore!.collection('drivers').doc(driverId), {
-            'assignedRouteIds': FieldValue.arrayUnion([routeId]),
-          });
-        }
-      }
-      final driverName = driverId != null ? driverNameById[driverId] : null;
-
-      final newTaken = [...taken, ...seatNumbers]..sort();
-      tx.update(routeRef, {
+      final newTaken = ({...taken, ...seatNumbers}.toList())..sort();
+      tx.set(seatRef, {
+        'routeId': routeId,
+        'totalSeats': route.totalSeats,
         'takenSeats': newTaken,
-        'availableSeats': (data['totalSeats'] as num).toInt() - newTaken.length,
-        'assignedDriverId': driverId,
-      });
+        'updatedAt': FieldValue.serverTimestamp(),
+      }, SetOptions(merge: true));
+    });
 
-      final id = 'BK-${bookingRef.id.substring(0, 6).toUpperCase()}';
-      final now = DateTime.now();
-      tx.set(bookingRef, {
-        'bookingId': id,
+    final now = DateTime.now();
+    final booking = BookingModel(
+      id: 'BK-${now.millisecondsSinceEpoch.toString().substring(6)}',
+      routeId: routeId,
+      riderId: riderId,
+      riderName: riderName,
+      origin: route.origin,
+      destination: route.destination,
+      departureTime: route.departureTime,
+      seatNumbers: seatNumbers,
+      totalPrice: totalPrice,
+      pickupPoint: pickupAddress ?? route.pickupPoint,
+      tripStatus: TripStatus.notStarted,
+      paymentStatus: PaymentStatus.paid,
+      bookingDate: now,
+      assignedDriverId: driver?.id,
+      assignedDriverName: driver?.name,
+    );
+
+    // Persist the booking record (best-effort; seat reservation already done).
+    try {
+      await _firestore!.collection('bookings').add({
+        'bookingId': booking.id,
         'userId': riderId,
         'riderName': riderName,
         'routeId': routeId,
-        'origin': data['origin'],
-        'destination': data['destination'],
+        'origin': route.origin,
+        'destination': route.destination,
         'seats': seatNumbers.length,
         'seatNumbers': seatNumbers,
         'totalPrice': totalPrice,
-        'pickupAddress': pickupAddress ?? data['pickupPoint'],
+        'pickupAddress': pickupAddress ?? route.pickupPoint,
         'dropoffAddress': dropoffAddress,
         'paymentIntentId': paymentIntentId,
-        'departureTime': data['departureTime'],
-        'assignedDriverId': driverId,
-        'assignedDriverName': driverName,
+        'departureTime': Timestamp.fromDate(route.departureTime),
+        'assignedDriverId': driver?.id,
+        'assignedDriverName': driver?.name,
         'status': 'confirmed',
         'createdAt': FieldValue.serverTimestamp(),
       });
+    } catch (_) {
+      // Booking record save failed; seats are still reserved and the rider
+      // sees their confirmation. "My Trips" may not list it until retried.
+    }
 
-      return BookingModel(
-        id: id,
-        routeId: routeId,
-        riderId: riderId,
-        riderName: riderName,
-        origin: data['origin'] as String? ?? '',
-        destination: data['destination'] as String? ?? '',
-        departureTime:
-            (data['departureTime'] as Timestamp?)?.toDate() ?? now,
-        seatNumbers: seatNumbers,
-        totalPrice: totalPrice,
-        pickupPoint: (pickupAddress ?? data['pickupPoint'] as String?) ?? '',
-        tripStatus: TripStatus.notStarted,
-        paymentStatus: PaymentStatus.paid,
-        bookingDate: now,
-        assignedDriverId: driverId,
-        assignedDriverName: driverName,
-      );
-    });
+    return booking;
   }
 
   Future<void> saveDriverApplication({
@@ -327,7 +209,8 @@ class FirestoreDataService {
         .where('userId', isEqualTo: userId)
         .get();
 
-    final results = snapshot.docs.map((doc) => {'id': doc.id, ...doc.data()}).toList();
+    final results =
+        snapshot.docs.map((doc) => {'id': doc.id, ...doc.data()}).toList();
     results.sort((a, b) {
       final aTime = a['createdAt'] as Timestamp?;
       final bTime = b['createdAt'] as Timestamp?;
