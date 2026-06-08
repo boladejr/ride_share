@@ -8,8 +8,15 @@ import 'checkout_page.dart';
 
 class SeatSelectionPage extends StatefulWidget {
   final RouteModel route;
+  final String? pickupAddress;
+  final String? dropoffAddress;
 
-  const SeatSelectionPage({super.key, required this.route});
+  const SeatSelectionPage({
+    super.key,
+    required this.route,
+    this.pickupAddress,
+    this.dropoffAddress,
+  });
 
   @override
   State<SeatSelectionPage> createState() => _SeatSelectionPageState();
@@ -60,6 +67,8 @@ class _SeatSelectionPageState extends State<SeatSelectionPage> {
         builder: (_) => CheckoutPage(
           route: widget.route,
           selectedSeats: _selectedSeats.toList()..sort(),
+          pickupAddress: widget.pickupAddress,
+          dropoffAddress: widget.dropoffAddress,
         ),
       ),
     );

@@ -13,6 +13,7 @@ class BookingModel {
   final List<int> seatNumbers;
   final double totalPrice;
   final String pickupPoint;
+  final String? dropoffPoint;
   final TripStatus tripStatus;
   final PaymentStatus paymentStatus;
   final DateTime bookingDate;
@@ -30,6 +31,7 @@ class BookingModel {
     required this.seatNumbers,
     required this.totalPrice,
     required this.pickupPoint,
+    this.dropoffPoint,
     required this.tripStatus,
     required this.paymentStatus,
     required this.bookingDate,
@@ -48,6 +50,7 @@ class BookingModel {
     List<int>? seatNumbers,
     double? totalPrice,
     String? pickupPoint,
+    String? dropoffPoint,
     TripStatus? tripStatus,
     PaymentStatus? paymentStatus,
     DateTime? bookingDate,
@@ -65,6 +68,7 @@ class BookingModel {
       seatNumbers: seatNumbers ?? this.seatNumbers,
       totalPrice: totalPrice ?? this.totalPrice,
       pickupPoint: pickupPoint ?? this.pickupPoint,
+      dropoffPoint: dropoffPoint ?? this.dropoffPoint,
       tripStatus: tripStatus ?? this.tripStatus,
       paymentStatus: paymentStatus ?? this.paymentStatus,
       bookingDate: bookingDate ?? this.bookingDate,

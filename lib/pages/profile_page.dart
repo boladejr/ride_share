@@ -329,6 +329,7 @@ class _ProfilePageState extends State<ProfilePage> {
     final seatNumbers = booking['seatNumbers'] as List<dynamic>?;
     final createdAt = booking['createdAt'];
     final pickupAddress = booking['pickupAddress'] as String?;
+    final dropoffAddress = booking['dropoffAddress'] as String?;
     final driverName = booking['assignedDriverName'] as String?;
 
     DateTime? bookingDate;
@@ -415,6 +416,22 @@ class _ProfilePageState extends State<ProfilePage> {
                 Expanded(
                   child: Text(
                     pickupAddress,
+                    style: GoogleFonts.inter(fontSize: 11, color: AppTheme.textTertiary),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ],
+            ),
+          ],
+          if (dropoffAddress != null && dropoffAddress.isNotEmpty) ...[
+            const SizedBox(height: 6),
+            Row(
+              children: [
+                Icon(Icons.flag_outlined, size: 14, color: AppTheme.textTertiary),
+                const SizedBox(width: 4),
+                Expanded(
+                  child: Text(
+                    dropoffAddress,
                     style: GoogleFonts.inter(fontSize: 11, color: AppTheme.textTertiary),
                     overflow: TextOverflow.ellipsis,
                   ),

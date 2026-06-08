@@ -133,7 +133,11 @@ class RouteSearchPage extends StatelessWidget {
                     padding: const EdgeInsets.all(20),
                     itemCount: routes.length,
                     itemBuilder: (context, index) {
-                      return _RouteCard(route: routes[index]);
+                      return _RouteCard(
+                        route: routes[index],
+                        pickupAddress: pickupAddress,
+                        dropoffAddress: dropoffAddress,
+                      );
                     },
                   ),
           ),
@@ -147,8 +151,14 @@ class RouteSearchPage extends StatelessWidget {
 
 class _RouteCard extends StatelessWidget {
   final RouteModel route;
+  final String? pickupAddress;
+  final String? dropoffAddress;
 
-  const _RouteCard({required this.route});
+  const _RouteCard({
+    required this.route,
+    this.pickupAddress,
+    this.dropoffAddress,
+  });
 
   String _formatDuration(Duration d) {
     final hours = d.inHours;
@@ -176,7 +186,11 @@ class _RouteCard extends StatelessWidget {
             ? () => Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (_) => SeatSelectionPage(route: route),
+                    builder: (_) => SeatSelectionPage(
+                      route: route,
+                      pickupAddress: pickupAddress,
+                      dropoffAddress: dropoffAddress,
+                    ),
                   ),
                 )
             : null,
@@ -316,7 +330,16 @@ class _RouteCard extends StatelessWidget {
                 height: 48,
                 child: ElevatedButton(
                   onPressed: route.availableSeats > 0
-                      ? () => Navigator.push(context, MaterialPageRoute(builder: (_) => SeatSelectionPage(route: route)))
+                      ? () => Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => SeatSelectionPage(
+                                route: route,
+                                pickupAddress: pickupAddress,
+                                dropoffAddress: dropoffAddress,
+                              ),
+                            ),
+                          )
                       : null,
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.center,

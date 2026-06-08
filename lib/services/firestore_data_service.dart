@@ -141,6 +141,7 @@ class FirestoreDataService {
       seatNumbers: seatNumbers,
       totalPrice: totalPrice,
       pickupPoint: pickupAddress ?? route.pickupPoint,
+      dropoffPoint: dropoffAddress,
       tripStatus: TripStatus.notStarted,
       paymentStatus: PaymentStatus.paid,
       bookingDate: now,

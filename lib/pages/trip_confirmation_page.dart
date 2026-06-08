@@ -196,7 +196,10 @@ class TripConfirmationPage extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Pickup Point',
+                    (booking.dropoffPoint != null &&
+                            booking.dropoffPoint!.isNotEmpty)
+                        ? 'Pickup & Drop-off'
+                        : 'Pickup Point',
                     style: GoogleFonts.inter(
                       fontSize: 16,
                       fontWeight: FontWeight.w700,
@@ -231,6 +234,37 @@ class TripConfirmationPage extends StatelessWidget {
                       ),
                     ],
                   ),
+                  if (booking.dropoffPoint != null &&
+                      booking.dropoffPoint!.isNotEmpty) ...[
+                    const SizedBox(height: 12),
+                    Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: AppTheme.primaryDark.withValues(alpha: 0.08),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: Icon(
+                            Icons.flag_outlined,
+                            color: AppTheme.primaryDark,
+                            size: 20,
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Text(
+                            booking.dropoffPoint!,
+                            style: GoogleFonts.inter(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w500,
+                              color: AppTheme.primaryDark,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
                   const SizedBox(height: 16),
                   // Map placeholder
                   Container(

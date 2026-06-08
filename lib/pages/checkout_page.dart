@@ -13,11 +13,15 @@ import 'trip_confirmation_page.dart';
 class CheckoutPage extends StatefulWidget {
   final RouteModel route;
   final List<int> selectedSeats;
+  final String? pickupAddress;
+  final String? dropoffAddress;
 
   const CheckoutPage({
     super.key,
     required this.route,
     required this.selectedSeats,
+    this.pickupAddress,
+    this.dropoffAddress,
   });
 
   @override
@@ -74,7 +78,8 @@ class _CheckoutPageState extends State<CheckoutPage> {
         totalPrice: _totalPrice,
         riderId: riderId,
         riderName: riderName,
-        pickupAddress: widget.route.pickupPoint,
+        pickupAddress: widget.pickupAddress ?? widget.route.pickupPoint,
+        dropoffAddress: widget.dropoffAddress,
       );
     } on SeatUnavailableException catch (e) {
       if (!mounted) return;
