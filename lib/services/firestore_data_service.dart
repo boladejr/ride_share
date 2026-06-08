@@ -151,7 +151,7 @@ class FirestoreDataService {
 
     // Persist the booking record (best-effort; seat reservation already done).
     try {
-      await _firestore!.collection('bookings').add({
+      final bookingRef = await _firestore!.collection('bookings').add({
         'bookingId': booking.id,
         'userId': riderId,
         'riderName': riderName,
@@ -170,12 +170,92 @@ class FirestoreDataService {
         'status': 'confirmed',
         'createdAt': FieldValue.serverTimestamp(),
       });
+
+      // No driver qualified at booking time → publish to the shared queue so
+      // any signed-in driver can claim the ride from the Drive page.
+      if (driver == null) {
+        await _firestore!.collection('pending_assignments').add({
+          'bookingDocId': bookingRef.id,
+          'bookingId': booking.id,
+          'routeId': routeId,
+          'origin': route.origin,
+          'destination': route.destination,
+          'departureTime': Timestamp.fromDate(route.departureTime),
+          'pickupAddress': pickupAddress ?? route.pickupPoint,
+          'dropoffAddress': dropoffAddress,
+          'seatNumbers': seatNumbers,
+          'seats': seatNumbers.length,
+          'riderName': riderName,
+          'totalPrice': totalPrice,
+          'status': 'open',
+          'createdAt': FieldValue.serverTimestamp(),
+        });
+      }
     } catch (_) {
       // Booking record save failed; seats are still reserved and the rider
       // sees their confirmation. "My Trips" may not list it until retried.
     }
 
     return booking;
+  }
+
+  // ---------------------------------------------------------------------------
+  // Pending driver assignments queue. When a booking gets no driver, it is
+  // published here; signed-in drivers list open rides and claim them.
+  // ---------------------------------------------------------------------------
+  Future<List<Map<String, dynamic>>> getPendingAssignments() async {
+    if (!_useFirestore) return [];
+    _init();
+    final snap = await _firestore!
+        .collection('pending_assignments')
+        .where('status', isEqualTo: 'open')
+        .get();
+    final results =
+        snap.docs.map((doc) => {'id': doc.id, ...doc.data()}).toList();
+    results.sort((a, b) {
+      final aTime = a['createdAt'] as Timestamp?;
+      final bTime = b['createdAt'] as Timestamp?;
+      if (aTime == null && bTime == null) return 0;
+      if (aTime == null) return 1;
+      if (bTime == null) return -1;
+      return bTime.compareTo(aTime);
+    });
+    return results;
+  }
+
+  /// Claims an open assignment for [driverId]. Atomic: succeeds only if the
+  /// assignment is still `open`, then stamps the driver onto the booking too.
+  /// Returns false if another driver claimed it first.
+  Future<bool> claimAssignment({
+    required String assignmentId,
+    required String bookingDocId,
+    required String driverId,
+    required String driverName,
+  }) async {
+    if (!_useFirestore) return false;
+    _init();
+    final assignRef =
+        _firestore!.collection('pending_assignments').doc(assignmentId);
+    final bookingRef = _firestore!.collection('bookings').doc(bookingDocId);
+    try {
+      return await _firestore!.runTransaction<bool>((tx) async {
+        final doc = await tx.get(assignRef);
+        if (!doc.exists || doc.data()?['status'] != 'open') return false;
+        tx.update(assignRef, {
+          'status': 'claimed',
+          'claimedByDriverId': driverId,
+          'claimedByDriverName': driverName,
+          'claimedAt': FieldValue.serverTimestamp(),
+        });
+        tx.update(bookingRef, {
+          'assignedDriverId': driverId,
+          'assignedDriverName': driverName,
+        });
+        return true;
+      });
+    } catch (_) {
+      return false;
+    }
   }
 
   Future<void> saveDriverApplication({

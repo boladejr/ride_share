@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:intl/intl.dart';
 import '../services/firebase_auth_service.dart';
+import '../services/firestore_data_service.dart';
 import '../models/user_model.dart';
 import '../theme.dart';
 
@@ -15,6 +17,10 @@ class DrivePage extends StatefulWidget {
 
 class _DrivePageState extends State<DrivePage> {
   final _auth = FirebaseAuthService();
+  final _dataService = FirestoreDataService();
+  List<Map<String, dynamic>>? _pending;
+  bool _loadingPending = false;
+  final Set<String> _claiming = {};
   final _nameController = TextEditingController();
   final _emailController = TextEditingController();
   final _phoneController = TextEditingController();
@@ -22,6 +28,45 @@ class _DrivePageState extends State<DrivePage> {
   final _licenseController = TextEditingController();
   bool _submitted = false;
   bool _agreeTerms = false;
+
+  @override
+  void initState() {
+    super.initState();
+    if (_auth.isLoggedIn && _auth.isDriver) {
+      _loadPending();
+    }
+  }
+
+  Future<void> _loadPending() async {
+    setState(() => _loadingPending = true);
+    final items = await _dataService.getPendingAssignments();
+    if (!mounted) return;
+    setState(() {
+      _pending = items;
+      _loadingPending = false;
+    });
+  }
+
+  Future<void> _claim(Map<String, dynamic> item) async {
+    final id = item['id'] as String;
+    setState(() => _claiming.add(id));
+    final ok = await _dataService.claimAssignment(
+      assignmentId: id,
+      bookingDocId: item['bookingDocId'] as String? ?? '',
+      driverId: _auth.currentUser?.id ?? '',
+      driverName: _auth.currentUser?.name ?? 'Driver',
+    );
+    if (!mounted) return;
+    setState(() => _claiming.remove(id));
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(ok
+            ? 'Ride claimed — it\'s now assigned to you.'
+            : 'That ride was already claimed by another driver.'),
+      ),
+    );
+    await _loadPending();
+  }
 
   @override
   void dispose() {
@@ -162,7 +207,7 @@ class _DrivePageState extends State<DrivePage> {
           if (_submitted)
             _buildSuccessState()
           else if (_auth.isLoggedIn && _auth.isDriver)
-            _buildAlreadyDriverState()
+            _buildDriverDashboard()
           else
             _buildApplicationForm(),
 
@@ -220,30 +265,206 @@ class _DrivePageState extends State<DrivePage> {
     );
   }
 
-  Widget _buildAlreadyDriverState() {
+  Widget _buildDriverDashboard() {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 24),
-      child: Container(
-        width: double.infinity,
-        padding: const EdgeInsets.all(32),
-        decoration: BoxDecoration(
-          color: AppTheme.primaryColor.withValues(alpha: 0.06),
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: AppTheme.primaryColor.withValues(alpha: 0.2)),
-        ),
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 600),
         child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Icon(Icons.verified_outlined, color: AppTheme.primaryColor, size: 40),
-            const SizedBox(height: 16),
-            Text('You\'re already a driver!', style: GoogleFonts.inter(fontSize: 20, fontWeight: FontWeight.w800, color: AppTheme.primaryDark)),
-            const SizedBox(height: 8),
-            Text(
-              'Visit your dashboard to manage routes and trips.',
-              textAlign: TextAlign.center,
-              style: GoogleFonts.inter(fontSize: 14, color: AppTheme.textSecondary),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(32),
+              decoration: BoxDecoration(
+                color: AppTheme.primaryColor.withValues(alpha: 0.06),
+                borderRadius: BorderRadius.circular(20),
+                border:
+                    Border.all(color: AppTheme.primaryColor.withValues(alpha: 0.2)),
+              ),
+              child: Column(
+                children: [
+                  Icon(Icons.verified_outlined,
+                      color: AppTheme.primaryColor, size: 40),
+                  const SizedBox(height: 16),
+                  Text('You\'re already a driver!',
+                      style: GoogleFonts.inter(
+                          fontSize: 20,
+                          fontWeight: FontWeight.w800,
+                          color: AppTheme.primaryDark)),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Claim rides that need a driver below.',
+                    textAlign: TextAlign.center,
+                    style: GoogleFonts.inter(
+                        fontSize: 14, color: AppTheme.textSecondary),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 24),
+            _buildPendingQueue(),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPendingQueue() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Row(
+          children: [
+            Expanded(
+              child: Text('Rides needing a driver',
+                  style: GoogleFonts.inter(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w800,
+                      color: AppTheme.primaryDark)),
+            ),
+            IconButton(
+              onPressed: _loadingPending ? null : _loadPending,
+              icon: const Icon(Icons.refresh),
+              tooltip: 'Refresh',
+              color: AppTheme.primaryColor,
             ),
           ],
         ),
+        const SizedBox(height: 8),
+        if (_loadingPending)
+          const Padding(
+            padding: EdgeInsets.symmetric(vertical: 32),
+            child: Center(child: CircularProgressIndicator()),
+          )
+        else if (_pending == null || _pending!.isEmpty)
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(28),
+            decoration: BoxDecoration(
+              color: AppTheme.surfaceColor,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: AppTheme.borderColor),
+            ),
+            child: Column(
+              children: [
+                Icon(Icons.inbox_outlined,
+                    color: AppTheme.textTertiary, size: 32),
+                const SizedBox(height: 12),
+                Text('No rides need a driver right now.',
+                    style: GoogleFonts.inter(
+                        fontSize: 14, color: AppTheme.textSecondary)),
+              ],
+            ),
+          )
+        else
+          ..._pending!.map(_pendingCard),
+      ],
+    );
+  }
+
+  Widget _pendingCard(Map<String, dynamic> item) {
+    final origin = item['origin'] ?? '';
+    final destination = item['destination'] ?? '';
+    final pickup = item['pickupAddress'] as String?;
+    final dropoff = item['dropoffAddress'] as String?;
+    final seats = item['seats'] as int? ?? 0;
+    final price = (item['totalPrice'] as num?)?.toDouble() ?? 0;
+    final departure = (item['departureTime'] as dynamic)?.toDate() as DateTime?;
+    final id = item['id'] as String;
+    final claiming = _claiming.contains(id);
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: AppTheme.borderColor),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 8, height: 8,
+                decoration: BoxDecoration(
+                    color: Colors.orange, shape: BoxShape.circle),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text('$origin  \u2192  $destination',
+                    style: GoogleFonts.inter(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w700,
+                        color: AppTheme.primaryDark)),
+              ),
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                decoration: BoxDecoration(
+                  color: Colors.orange.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text('Needs driver',
+                    style: GoogleFonts.inter(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.orange.shade800)),
+              ),
+            ],
+          ),
+          if (departure != null) ...[
+            const SizedBox(height: 8),
+            _infoLine(Icons.schedule_outlined,
+                DateFormat('EEE, MMM d \u00b7 hh:mm a').format(departure)),
+          ],
+          if (pickup != null && pickup.isNotEmpty)
+            _infoLine(Icons.location_on_outlined, pickup),
+          if (dropoff != null && dropoff.isNotEmpty)
+            _infoLine(Icons.flag_outlined, dropoff),
+          _infoLine(Icons.event_seat_outlined,
+              '$seats seat${seats != 1 ? 's' : ''}  \u00b7  \$${price.toStringAsFixed(2)}'),
+          const SizedBox(height: 12),
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton(
+              onPressed: claiming ? null : () => _claim(item),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppTheme.primaryColor,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 14),
+              ),
+              child: claiming
+                  ? const SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(
+                          strokeWidth: 2, color: Colors.white),
+                    )
+                  : const Text('Claim this ride'),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _infoLine(IconData icon, String text) {
+    return Padding(
+      padding: const EdgeInsets.only(top: 6),
+      child: Row(
+        children: [
+          Icon(icon, size: 14, color: AppTheme.textTertiary),
+          const SizedBox(width: 6),
+          Expanded(
+            child: Text(text,
+                style: GoogleFonts.inter(
+                    fontSize: 12, color: AppTheme.textSecondary),
+                overflow: TextOverflow.ellipsis),
+          ),
+        ],
       ),
     );
   }
