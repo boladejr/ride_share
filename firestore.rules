@@ -1,0 +1,47 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // User profiles hold personal data (name, email, phone). Only the signed-in
+    // owner may read or write their own document.
+    match /users/{userId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+
+    // Bookings are private to the rider who created them. A signed-in rider can
+    // create a booking for themselves and read only their own; bookings are
+    // immutable from the client.
+    match /bookings/{bookingId} {
+      allow read: if request.auth != null
+                  && resource.data.userId == request.auth.uid;
+      allow create: if request.auth != null
+                    && request.resource.data.userId == request.auth.uid;
+      allow update, delete: if false;
+    }
+
+    // Shared seat inventory. Anyone may read availability (needed to browse
+    // routes before logging in), but only signed-in riders may reserve seats.
+    // Validate the document shape and never allow deletion.
+    match /route_seats/{routeId} {
+      allow read: if true;
+      allow create, update: if request.auth != null
+                            && request.resource.data.routeId is string
+                            && request.resource.data.takenSeats is list;
+      allow delete: if false;
+    }
+
+    // Driver applications: a signed-in user may submit their own application.
+    // Applications are reviewed out-of-band, so no client reads/edits.
+    match /driver_applications/{appId} {
+      allow create: if request.auth != null
+                    && request.resource.data.userId == request.auth.uid;
+      allow read, update, delete: if false;
+    }
+
+    // Deny everything else by default.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

@@ -6,6 +6,8 @@ import '../models/route_model.dart';
 import '../services/firebase_auth_service.dart';
 import '../services/firestore_data_service.dart';
 import '../theme.dart';
+import 'login_page.dart';
+import 'signup_page.dart';
 import 'trip_confirmation_page.dart';
 
 class CheckoutPage extends StatefulWidget {
@@ -33,6 +35,13 @@ class _CheckoutPageState extends State<CheckoutPage> {
   double get _totalPrice => widget.selectedSeats.length * widget.route.pricePerSeat;
 
   Future<void> _confirmAndPay() async {
+    // Booking requires a signed-in account (Firestore rules reject anonymous
+    // writes). Gate here so the rules never silently fail mid-checkout.
+    if (!FirebaseAuthService().isLoggedIn) {
+      _promptLogin();
+      return;
+    }
+
     if (_cardNumberController.text.isEmpty ||
         _expiryController.text.isEmpty ||
         _cvvController.text.isEmpty ||
@@ -99,6 +108,72 @@ class _CheckoutPageState extends State<CheckoutPage> {
         builder: (_) => TripConfirmationPage(booking: booking),
       ),
       (route) => route.isFirst,
+    );
+  }
+
+  void _promptLogin() {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Log in to book'),
+        content: const Text(
+          'Please log in or create an account to complete your booking.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(ctx);
+              _openLogin();
+            },
+            child: const Text('Log in'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _openLogin() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => LoginPage(
+          onSuccess: () {
+            Navigator.pop(context);
+            setState(() {});
+          },
+          onSignUpTap: () {
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(
+                builder: (_) => SignUpPage(
+                  onSuccess: () {
+                    Navigator.pop(context);
+                    setState(() {});
+                  },
+                  onLoginTap: () {
+                    Navigator.pushReplacement(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => LoginPage(
+                          onSuccess: () {
+                            Navigator.pop(context);
+                            setState(() {});
+                          },
+                          onSignUpTap: () => Navigator.pop(context),
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ),
+            );
+          },
+        ),
+      ),
     );
   }
 
