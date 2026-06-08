@@ -205,8 +205,10 @@ class _SeatSelectionPageState extends State<SeatSelectionPage> {
                         child: CircularProgressIndicator(),
                       )
                     else
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
+                      Wrap(
+                        alignment: WrapAlignment.center,
+                        spacing: 4,
+                        runSpacing: 12,
                         children: [
                           for (int i = 1; i <= widget.route.totalSeats; i++)
                             Builder(
@@ -233,7 +235,7 @@ class _SeatSelectionPageState extends State<SeatSelectionPage> {
                           Icon(Icons.airline_seat_recline_normal_outlined, size: 16, color: AppTheme.primaryColor),
                           const SizedBox(width: 6),
                           Text(
-                            'Comfortable ${widget.route.totalSeats}-seat car ride',
+                            'Comfortable ride \u00b7 ${widget.route.totalSeats} seats',
                             style: GoogleFonts.inter(fontSize: 12, color: AppTheme.primaryColor, fontWeight: FontWeight.w500),
                           ),
                         ],
