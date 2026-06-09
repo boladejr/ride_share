@@ -19,6 +19,7 @@ class _DrivePageState extends State<DrivePage> {
   final _auth = FirebaseAuthService();
   final _dataService = FirestoreDataService();
   List<Map<String, dynamic>>? _pending;
+  List<Map<String, dynamic>>? _assigned;
   bool _loadingPending = false;
   final Set<String> _claiming = {};
   final _nameController = TextEditingController();
@@ -40,9 +41,12 @@ class _DrivePageState extends State<DrivePage> {
   Future<void> _loadPending() async {
     setState(() => _loadingPending = true);
     final items = await _dataService.getPendingAssignments();
+    final mine =
+        await _dataService.getAssignedRides(_auth.currentUser?.id ?? '');
     if (!mounted) return;
     setState(() {
       _pending = items;
+      _assigned = mine;
       _loadingPending = false;
     });
   }
@@ -315,9 +319,97 @@ class _DrivePageState extends State<DrivePage> {
               ),
             ),
             const SizedBox(height: 24),
+            _buildAssignedSection(),
             _buildPendingQueue(),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildAssignedSection() {
+    final rides = _assigned ?? [];
+    if (rides.isEmpty) return const SizedBox.shrink();
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Text('Your assigned rides',
+            style: GoogleFonts.inter(
+                fontSize: 18,
+                fontWeight: FontWeight.w800,
+                color: AppTheme.primaryDark)),
+        const SizedBox(height: 8),
+        ...rides.map(_assignedCard),
+        const SizedBox(height: 24),
+      ],
+    );
+  }
+
+  Widget _assignedCard(Map<String, dynamic> item) {
+    final origin = item['origin'] ?? '';
+    final destination = item['destination'] ?? '';
+    final pickup = item['pickupAddress'] as String?;
+    final dropoff = item['dropoffAddress'] as String?;
+    final seats = item['seats'] as int? ?? 0;
+    final price = (item['totalPrice'] as num?)?.toDouble() ?? 0;
+    final rider = item['riderName'] as String?;
+    final departure = (item['departureTime'] as dynamic)?.toDate() as DateTime?;
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: AppTheme.primaryColor.withValues(alpha: 0.3)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 8, height: 8,
+                decoration: const BoxDecoration(
+                    color: Colors.green, shape: BoxShape.circle),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text('$origin  \u2192  $destination',
+                    style: GoogleFonts.inter(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w700,
+                        color: AppTheme.primaryDark)),
+              ),
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                decoration: BoxDecoration(
+                  color: Colors.green.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text('Assigned to you',
+                    style: GoogleFonts.inter(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.green.shade800)),
+              ),
+            ],
+          ),
+          if (departure != null) ...[
+            const SizedBox(height: 8),
+            _infoLine(Icons.schedule_outlined,
+                DateFormat('EEE, MMM d \u00b7 hh:mm a').format(departure)),
+          ],
+          if (rider != null && rider.isNotEmpty)
+            _infoLine(Icons.person_outline, rider),
+          if (pickup != null && pickup.isNotEmpty)
+            _infoLine(Icons.location_on_outlined, pickup),
+          if (dropoff != null && dropoff.isNotEmpty)
+            _infoLine(Icons.flag_outlined, dropoff),
+          _infoLine(Icons.event_seat_outlined,
+              '$seats seat${seats != 1 ? 's' : ''}  \u00b7  \$${price.toStringAsFixed(2)}'),
+        ],
       ),
     );
   }

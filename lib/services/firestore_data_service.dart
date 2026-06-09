@@ -35,9 +35,78 @@ class FirestoreDataService {
   CollectionReference<Map<String, dynamic>> get _seats =>
       _firestore!.collection('route_seats');
 
+  /// Shared driver pool. Each doc id is the driver's id (uid for registered
+  /// drivers, or the seeded mock id). This is read at booking time so a rider
+  /// on one device can be matched to a driver who registered on another.
+  CollectionReference<Map<String, dynamic>> get _activeDrivers =>
+      _firestore!.collection('active_drivers');
+
+  bool _poolSeeded = false;
+
   Set<int> _seatsFrom(Map<String, dynamic>? data) =>
       (data?['takenSeats'] as List?)?.map((e) => (e as num).toInt()).toSet() ??
       {};
+
+  /// Seeds the base (mock) drivers into the shared Firestore pool once, so
+  /// auto-assignment works across devices even before anyone registers.
+  /// Idempotent and best-effort.
+  Future<void> _ensurePoolSeeded() async {
+    if (_poolSeeded || !_useFirestore) return;
+    _init();
+    try {
+      final existing = await _activeDrivers.limit(1).get();
+      if (existing.docs.isEmpty) {
+        final batch = _firestore!.batch();
+        for (final d in _mockService.drivers) {
+          final city = _mockService.driverCurrentCity(d);
+          final busyUntil = _mockService.driverBusyUntil(d);
+          batch.set(_activeDrivers.doc(d.id), {
+            'name': d.name,
+            'currentCity': city,
+            'busyUntil':
+                busyUntil != null ? Timestamp.fromDate(busyUntil) : null,
+            'assignedCount': d.assignedRouteIds.length,
+            'createdAt': FieldValue.serverTimestamp(),
+          });
+        }
+        await batch.commit();
+      }
+      _poolSeeded = true;
+    } catch (_) {
+      // Best-effort; assignment falls back to the pending queue if the pool
+      // can't be read/seeded.
+    }
+  }
+
+  /// Picks the best available driver from the shared pool for [origin] departing
+  /// at [departure]: a driver who is free (not busy past the departure) and
+  /// either headed from [origin] or brand-new (no current city). Load-balanced
+  /// by fewest assignments. Returns the chosen doc id + name, or null.
+  Future<({String id, String name})?> _pickDriverFromPool(
+      String origin, DateTime departure) async {
+    try {
+      final snap = await _activeDrivers.get();
+      final eligible = snap.docs.where((doc) {
+        final data = doc.data();
+        final city = data['currentCity'] as String?;
+        final busyUntil = (data['busyUntil'] as Timestamp?)?.toDate();
+        final cityOk =
+            city == null || city.toLowerCase() == origin.toLowerCase();
+        final freeOk = busyUntil == null || !departure.isBefore(busyUntil);
+        return cityOk && freeOk;
+      }).toList()
+        ..sort((a, b) {
+          final byLoad = ((a.data()['assignedCount'] as num?) ?? 0)
+              .compareTo((b.data()['assignedCount'] as num?) ?? 0);
+          return byLoad != 0 ? byLoad : a.id.compareTo(b.id);
+        });
+      if (eligible.isEmpty) return null;
+      final chosen = eligible.first;
+      return (id: chosen.id, name: chosen.data()['name'] as String? ?? 'Driver');
+    } catch (_) {
+      return null;
+    }
+  }
 
   // ---------------------------------------------------------------------------
   // Reads
@@ -95,10 +164,9 @@ class FirestoreDataService {
       throw Exception('Route not found');
     }
 
-    // Driver assignment stays in the mock (in-memory, load-balanced v1).
-    final driver = _mockService.assignDriverForRoute(routeId);
-
     if (!_useFirestore) {
+      // Offline/demo fallback: in-memory load-balanced assignment.
+      _mockService.assignDriverForRoute(routeId);
       return _mockService.createBooking(
         routeId: routeId,
         seatNumbers: seatNumbers,
@@ -106,18 +174,45 @@ class FirestoreDataService {
       );
     }
     _init();
+    await _ensurePoolSeeded();
+
+    final routeEnd = route.departureTime.add(route.duration);
+    // Pick a candidate from the shared pool (read outside the transaction),
+    // then confirm + claim it atomically inside.
+    final candidate =
+        await _pickDriverFromPool(route.origin, route.departureTime);
 
     final seed = _mockService.getTakenSeats(routeId);
     final seatRef = _seats.doc(routeId);
+    final driverRef = candidate != null ? _activeDrivers.doc(candidate.id) : null;
 
-    // Reserve the seats atomically.
+    // Reserve seats + claim the driver atomically so concurrent riders can't
+    // take the same seat or the same driver for an overlapping trip.
+    ({String id, String name})? assigned;
     await _firestore!.runTransaction((tx) async {
-      final doc = await tx.get(seatRef);
-      final taken = {...seed, ..._seatsFrom(doc.data())};
+      final seatDoc = await tx.get(seatRef);
+      final driverDoc =
+          driverRef != null ? await tx.get(driverRef) : null;
 
+      final taken = {...seed, ..._seatsFrom(seatDoc.data())};
       final conflicts = seatNumbers.where(taken.contains).toList()..sort();
       if (conflicts.isNotEmpty) {
         throw SeatUnavailableException(conflicts);
+      }
+
+      // Re-confirm the candidate is still eligible against fresh state.
+      assigned = null;
+      if (candidate != null && driverDoc != null && driverDoc.exists) {
+        final d = driverDoc.data()!;
+        final city = d['currentCity'] as String?;
+        final busyUntil = (d['busyUntil'] as Timestamp?)?.toDate();
+        final cityOk = city == null ||
+            city.toLowerCase() == route.origin.toLowerCase();
+        final freeOk =
+            busyUntil == null || !route.departureTime.isBefore(busyUntil);
+        if (cityOk && freeOk) {
+          assigned = candidate;
+        }
       }
 
       final newTaken = ({...taken, ...seatNumbers}.toList())..sort();
@@ -127,7 +222,19 @@ class FirestoreDataService {
         'takenSeats': newTaken,
         'updatedAt': FieldValue.serverTimestamp(),
       }, SetOptions(merge: true));
+
+      // Advance the assigned driver: they're now headed to the destination and
+      // busy until the trip ends; bump their load for balancing.
+      if (assigned != null && driverRef != null) {
+        tx.update(driverRef, {
+          'currentCity': route.destination,
+          'busyUntil': Timestamp.fromDate(routeEnd),
+          'assignedCount': FieldValue.increment(1),
+        });
+      }
     });
+
+    final driver = assigned;
 
     final now = DateTime.now();
     final booking = BookingModel(
@@ -237,10 +344,17 @@ class FirestoreDataService {
     final assignRef =
         _firestore!.collection('pending_assignments').doc(assignmentId);
     final bookingRef = _firestore!.collection('bookings').doc(bookingDocId);
+    final driverRef =
+        driverId.isNotEmpty ? _activeDrivers.doc(driverId) : null;
     try {
       return await _firestore!.runTransaction<bool>((tx) async {
         final doc = await tx.get(assignRef);
         if (!doc.exists || doc.data()?['status'] != 'open') return false;
+        // Read the driver pool doc (if any) before writing.
+        final driverDoc = driverRef != null ? await tx.get(driverRef) : null;
+        final dest = doc.data()?['destination'] as String?;
+        final departure = doc.data()?['departureTime'] as Timestamp?;
+
         tx.update(assignRef, {
           'status': 'claimed',
           'claimedByDriverId': driverId,
@@ -251,6 +365,16 @@ class FirestoreDataService {
           'assignedDriverId': driverId,
           'assignedDriverName': driverName,
         });
+        // Advance the claiming driver's location in the shared pool so their
+        // next auto-match chains from this ride's destination.
+        if (driverRef != null && driverDoc != null && driverDoc.exists) {
+          final driverUpdate = <String, dynamic>{
+            'assignedCount': FieldValue.increment(1),
+          };
+          if (dest != null) driverUpdate['currentCity'] = dest;
+          if (departure != null) driverUpdate['busyUntil'] = departure;
+          tx.update(driverRef, driverUpdate);
+        }
         return true;
       });
     } catch (_) {
@@ -278,6 +402,23 @@ class FirestoreDataService {
     if (!_useFirestore) return;
     _init();
 
+    // Register the driver in the shared pool (doc id = their uid) so riders on
+    // other devices can be auto-matched to them. A fresh driver has no current
+    // city, so they're available to start from any origin.
+    if (userId.isNotEmpty) {
+      try {
+        await _activeDrivers.doc(userId).set({
+          'name': name,
+          'currentCity': null,
+          'busyUntil': null,
+          'assignedCount': 0,
+          'createdAt': FieldValue.serverTimestamp(),
+        });
+      } catch (_) {
+        // Already registered or write blocked; pool entry is best-effort.
+      }
+    }
+
     await _firestore!.collection('driver_applications').add({
       'userId': userId,
       'name': name,
@@ -288,6 +429,32 @@ class FirestoreDataService {
       'status': 'pending',
       'createdAt': FieldValue.serverTimestamp(),
     });
+  }
+
+  /// Rides that have been assigned to [driverId] (across all devices). Lets a
+  /// driver see their auto-assigned and claimed rides on the Drive page.
+  Future<List<Map<String, dynamic>>> getAssignedRides(String driverId) async {
+    if (!_useFirestore || driverId.isEmpty) return [];
+    _init();
+    try {
+      final snap = await _firestore!
+          .collection('bookings')
+          .where('assignedDriverId', isEqualTo: driverId)
+          .get();
+      final results =
+          snap.docs.map((doc) => {'id': doc.id, ...doc.data()}).toList();
+      results.sort((a, b) {
+        final aTime = a['departureTime'] as Timestamp?;
+        final bTime = b['departureTime'] as Timestamp?;
+        if (aTime == null && bTime == null) return 0;
+        if (aTime == null) return 1;
+        if (bTime == null) return -1;
+        return aTime.compareTo(bTime);
+      });
+      return results;
+    } catch (_) {
+      return [];
+    }
   }
 
   Future<List<Map<String, dynamic>>> getUserBookings(String userId) async {

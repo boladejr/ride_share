@@ -387,6 +387,19 @@ class MockDataService {
   /// their most recent assigned route. Null means a brand-new driver with no
   /// trips yet, who is therefore available to start from any origin.
   String? driverCurrentCity(DriverModel driver) {
+    final latest = _latestRouteFor(driver);
+    return latest?.destination;
+  }
+
+  /// When the driver becomes free again: the end time of their latest assigned
+  /// route. Null means they have no trips and are free now.
+  DateTime? driverBusyUntil(DriverModel driver) {
+    final latest = _latestRouteFor(driver);
+    if (latest == null) return null;
+    return latest.departureTime.add(latest.duration);
+  }
+
+  RouteModel? _latestRouteFor(DriverModel driver) {
     RouteModel? latest;
     for (final id in driver.assignedRouteIds) {
       final r = getRouteById(id);
@@ -395,7 +408,7 @@ class MockDataService {
         latest = r;
       }
     }
-    return latest?.destination;
+    return latest;
   }
 
   List<RouteModel> getRoutesForDriver(String driverId) {
