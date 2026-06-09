@@ -105,6 +105,18 @@ class _DrivePageState extends State<DrivePage> {
       role: UserRole.driver,
     );
 
+    // Add the new driver to the active assignment pool immediately so they can
+    // start being matched to rides (no approval step).
+    await _dataService.saveDriverApplication(
+      userId: _auth.currentUser?.id ?? '',
+      name: _nameController.text,
+      email: _emailController.text,
+      phone: _phoneController.text,
+      vehicleInfo: _vehicleController.text,
+      licenseNumber: _licenseController.text,
+    );
+
+    if (!mounted) return;
     setState(() => _submitted = true);
   }
 

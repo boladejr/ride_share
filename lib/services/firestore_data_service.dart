@@ -266,6 +266,15 @@ class FirestoreDataService {
     required String vehicleInfo,
     required String licenseNumber,
   }) async {
+    // Add the driver to the active assignment pool right away so they can start
+    // getting matched to rides immediately (no approval step).
+    _mockService.addActiveDriver(
+      id: userId,
+      name: name,
+      email: email,
+      phone: phone,
+    );
+
     if (!_useFirestore) return;
     _init();
 

@@ -361,6 +361,43 @@ class MockDataService {
     }
   }
 
+  /// Adds a newly registered driver to the active assignment pool immediately
+  /// (no approval step). A fresh driver has no assigned routes, so their
+  /// "current city" is unknown and they can be matched to a ride departing from
+  /// any city for their first trip. After that they chain from their last
+  /// drop-off. Idempotent by id.
+  void addActiveDriver({
+    required String id,
+    required String name,
+    required String email,
+    required String phone,
+  }) {
+    if (id.isEmpty || _drivers.any((d) => d.id == id)) return;
+    _drivers.add(DriverModel(
+      id: id,
+      name: name,
+      email: email,
+      phone: phone,
+      assignedRouteIds: const [],
+      totalPayout: 0.0,
+    ));
+  }
+
+  /// The city a driver is currently in / will end up at: the destination of
+  /// their most recent assigned route. Null means a brand-new driver with no
+  /// trips yet, who is therefore available to start from any origin.
+  String? driverCurrentCity(DriverModel driver) {
+    RouteModel? latest;
+    for (final id in driver.assignedRouteIds) {
+      final r = getRouteById(id);
+      if (r == null) continue;
+      if (latest == null || r.departureTime.isAfter(latest.departureTime)) {
+        latest = r;
+      }
+    }
+    return latest?.destination;
+  }
+
   List<RouteModel> getRoutesForDriver(String driverId) {
     return _routes.where((r) => r.assignedDriverId == driverId).toList();
   }
@@ -392,13 +429,20 @@ class MockDataService {
       return getDriverById(route.assignedDriverId!);
     }
 
-    final candidates =
-        _drivers.where((d) => !_hasTimeConflict(d, route)).toList()
-          ..sort((a, b) {
-            final byLoad =
-                a.assignedRouteIds.length.compareTo(b.assignedRouteIds.length);
-            return byLoad != 0 ? byLoad : a.id.compareTo(b.id);
-          });
+    final candidates = _drivers.where((d) {
+      if (_hasTimeConflict(d, route)) return false;
+      // Direction-aware: a driver is only matched to a ride that departs from
+      // where they currently are (no deadheading). Brand-new drivers (no current
+      // city yet) are available to start from any origin.
+      final city = driverCurrentCity(d);
+      return city == null ||
+          city.toLowerCase() == route.origin.toLowerCase();
+    }).toList()
+      ..sort((a, b) {
+        final byLoad =
+            a.assignedRouteIds.length.compareTo(b.assignedRouteIds.length);
+        return byLoad != 0 ? byLoad : a.id.compareTo(b.id);
+      });
 
     if (candidates.isEmpty) return null;
 
