@@ -22,6 +22,7 @@ class _DrivePageState extends State<DrivePage> {
   List<Map<String, dynamic>>? _assigned;
   bool _loadingPending = false;
   final Set<String> _claiming = {};
+  final GlobalKey _formKey = GlobalKey();
   final _nameController = TextEditingController();
   final _emailController = TextEditingController();
   final _phoneController = TextEditingController();
@@ -150,10 +151,15 @@ class _DrivePageState extends State<DrivePage> {
                 if (!_auth.isLoggedIn && !_submitted)
                   ElevatedButton(
                     onPressed: () {
-                      Scrollable.ensureVisible(
-                        context,
-                        duration: const Duration(milliseconds: 500),
-                      );
+                      final ctx = _formKey.currentContext;
+                      if (ctx != null) {
+                        Scrollable.ensureVisible(
+                          ctx,
+                          duration: const Duration(milliseconds: 500),
+                          curve: Curves.easeInOut,
+                          alignment: 0.05,
+                        );
+                      }
                     },
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.white,
@@ -225,7 +231,7 @@ class _DrivePageState extends State<DrivePage> {
           else if (_auth.isLoggedIn && _auth.isDriver)
             _buildDriverDashboard()
           else
-            _buildApplicationForm(),
+            KeyedSubtree(key: _formKey, child: _buildApplicationForm()),
 
           const SizedBox(height: 48),
 
