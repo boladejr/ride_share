@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
@@ -29,6 +30,7 @@ class _ProfilePageState extends State<ProfilePage> {
 
   List<Map<String, dynamic>> _bookings = [];
   bool _loadingBookings = true;
+  StreamSubscription? _bookingsSub;
 
   @override
   void initState() {
@@ -52,28 +54,32 @@ class _ProfilePageState extends State<ProfilePage> {
     }
   }
 
-  Future<void> _loadBookings() async {
+  /// Subscribe to the rider's bookings so My Trips updates in real time (e.g.
+  /// the status badge advances Confirmed → Picked up → Completed as the driver
+  /// taps, with no manual refresh).
+  void _loadBookings() {
     final user = _auth.currentUser;
     if (user == null) return;
-
-    try {
-      final bookings = await _firestoreService.getUserBookings(user.id);
-      if (mounted) {
+    _bookingsSub?.cancel();
+    _bookingsSub = _firestoreService.userBookingsStream(user.id).listen(
+      (bookings) {
+        if (!mounted) return;
         setState(() {
           _bookings = bookings;
           _loadingBookings = false;
         });
-        WidgetsBinding.instance.addPostFrameCallback((_) => _maybeScrollToBookings());
-      }
-    } catch (_) {
-      if (mounted) {
-        setState(() => _loadingBookings = false);
-      }
-    }
+        WidgetsBinding.instance
+            .addPostFrameCallback((_) => _maybeScrollToBookings());
+      },
+      onError: (_) {
+        if (mounted) setState(() => _loadingBookings = false);
+      },
+    );
   }
 
   @override
   void dispose() {
+    _bookingsSub?.cancel();
     _nameController.dispose();
     _phoneController.dispose();
     _addressController.dispose();

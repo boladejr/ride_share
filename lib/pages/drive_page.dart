@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
@@ -23,6 +24,8 @@ class _DrivePageState extends State<DrivePage> {
   bool _loadingPending = false;
   final Set<String> _claiming = {};
   final Set<String> _updatingStatus = {};
+  StreamSubscription? _pendingSub;
+  StreamSubscription? _assignedSub;
   final GlobalKey _formKey = GlobalKey();
   final _nameController = TextEditingController();
   final _emailController = TextEditingController();
@@ -36,20 +39,29 @@ class _DrivePageState extends State<DrivePage> {
   void initState() {
     super.initState();
     if (_auth.isLoggedIn && _auth.isDriver) {
-      _loadPending();
+      _subscribeFeeds();
     }
   }
 
-  Future<void> _loadPending() async {
+  /// Subscribe to the live driver feeds (assigned rides + open claim queue) so
+  /// the Drive page updates in real time as rides are booked, assigned, claimed
+  /// or advanced — no manual refresh needed.
+  void _subscribeFeeds() {
     setState(() => _loadingPending = true);
-    final items = await _dataService.getPendingAssignments();
-    final mine =
-        await _dataService.getAssignedRides(_auth.currentUser?.id ?? '');
-    if (!mounted) return;
-    setState(() {
-      _pending = items;
-      _assigned = mine;
-      _loadingPending = false;
+    _pendingSub?.cancel();
+    _assignedSub?.cancel();
+    _pendingSub = _dataService.pendingAssignmentsStream().listen((items) {
+      if (!mounted) return;
+      setState(() {
+        _pending = items;
+        _loadingPending = false;
+      });
+    });
+    _assignedSub = _dataService
+        .assignedRidesStream(_auth.currentUser?.id ?? '')
+        .listen((mine) {
+      if (!mounted) return;
+      setState(() => _assigned = mine);
     });
   }
 
@@ -71,7 +83,7 @@ class _DrivePageState extends State<DrivePage> {
             : 'That ride was already claimed by another driver.'),
       ),
     );
-    await _loadPending();
+    // Live streams refresh the lists automatically.
   }
 
   Future<void> _updateStatus(Map<String, dynamic> item, String status) async {
@@ -93,11 +105,13 @@ class _DrivePageState extends State<DrivePage> {
             : 'Could not update the trip. Please try again.'),
       ),
     );
-    await _loadPending();
+    // Live streams refresh the lists automatically.
   }
 
   @override
   void dispose() {
+    _pendingSub?.cancel();
+    _assignedSub?.cancel();
     _nameController.dispose();
     _emailController.dispose();
     _phoneController.dispose();
@@ -146,6 +160,10 @@ class _DrivePageState extends State<DrivePage> {
 
     if (!mounted) return;
     setState(() => _submitted = true);
+    // They're now an active driver — start their live feeds.
+    if (_auth.isLoggedIn && _auth.isDriver) {
+      _subscribeFeeds();
+    }
   }
 
   @override
@@ -560,7 +578,7 @@ class _DrivePageState extends State<DrivePage> {
                       color: AppTheme.primaryDark)),
             ),
             IconButton(
-              onPressed: _loadingPending ? null : _loadPending,
+              onPressed: _loadingPending ? null : _subscribeFeeds,
               icon: const Icon(Icons.refresh),
               tooltip: 'Refresh',
               color: AppTheme.primaryColor,

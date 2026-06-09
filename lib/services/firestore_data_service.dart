@@ -497,6 +497,66 @@ class FirestoreDataService {
     }
   }
 
+  // ---------------------------------------------------------------------------
+  // Live (real-time) streams. Same data as the Future-based reads above, but
+  // emit a new list whenever the underlying Firestore docs change, so the UI
+  // updates without a manual refresh.
+  // ---------------------------------------------------------------------------
+
+  List<Map<String, dynamic>> _withIds(QuerySnapshot<Map<String, dynamic>> s) =>
+      s.docs.map((doc) => {'id': doc.id, ...doc.data()}).toList();
+
+  int _byTimestamp(Map<String, dynamic> a, Map<String, dynamic> b,
+      String field, bool descending) {
+    final aTime = a[field] as Timestamp?;
+    final bTime = b[field] as Timestamp?;
+    if (aTime == null && bTime == null) return 0;
+    if (aTime == null) return 1;
+    if (bTime == null) return -1;
+    return descending ? bTime.compareTo(aTime) : aTime.compareTo(bTime);
+  }
+
+  /// Live stream of a rider's bookings (newest first), for My Trips.
+  Stream<List<Map<String, dynamic>>> userBookingsStream(String userId) {
+    if (!_useFirestore || userId.isEmpty) {
+      return Stream.value(<Map<String, dynamic>>[]);
+    }
+    _init();
+    return _firestore!
+        .collection('bookings')
+        .where('userId', isEqualTo: userId)
+        .snapshots()
+        .map((s) =>
+            _withIds(s)..sort((a, b) => _byTimestamp(a, b, 'createdAt', true)));
+  }
+
+  /// Live stream of rides assigned to a driver (soonest first), for the Drive
+  /// page. Updates in real time as rides are auto-assigned or claimed.
+  Stream<List<Map<String, dynamic>>> assignedRidesStream(String driverId) {
+    if (!_useFirestore || driverId.isEmpty) {
+      return Stream.value(<Map<String, dynamic>>[]);
+    }
+    _init();
+    return _firestore!
+        .collection('bookings')
+        .where('assignedDriverId', isEqualTo: driverId)
+        .snapshots()
+        .map((s) => _withIds(s)
+          ..sort((a, b) => _byTimestamp(a, b, 'departureTime', false)));
+  }
+
+  /// Live stream of open (unclaimed) rides in the shared queue (newest first).
+  Stream<List<Map<String, dynamic>>> pendingAssignmentsStream() {
+    if (!_useFirestore) return Stream.value(<Map<String, dynamic>>[]);
+    _init();
+    return _firestore!
+        .collection('pending_assignments')
+        .where('status', isEqualTo: 'open')
+        .snapshots()
+        .map((s) =>
+            _withIds(s)..sort((a, b) => _byTimestamp(a, b, 'createdAt', true)));
+  }
+
   Future<List<Map<String, dynamic>>> getUserBookings(String userId) async {
     if (!_useFirestore) return [];
     _init();
