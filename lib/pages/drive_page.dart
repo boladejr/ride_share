@@ -396,13 +396,15 @@ class _DrivePageState extends State<DrivePage> {
               ),
             ],
           ),
+          if (rider != null && rider.isNotEmpty) ...[
+            const SizedBox(height: 10),
+            _riderRow(rider),
+          ],
           if (departure != null) ...[
             const SizedBox(height: 8),
             _infoLine(Icons.schedule_outlined,
                 DateFormat('EEE, MMM d \u00b7 hh:mm a').format(departure)),
           ],
-          if (rider != null && rider.isNotEmpty)
-            _infoLine(Icons.person_outline, rider),
           if (pickup != null && pickup.isNotEmpty)
             _infoLine(Icons.location_on_outlined, pickup),
           if (dropoff != null && dropoff.isNotEmpty)
@@ -411,6 +413,36 @@ class _DrivePageState extends State<DrivePage> {
               '$seats seat${seats != 1 ? 's' : ''}  \u00b7  \$${price.toStringAsFixed(2)}'),
         ],
       ),
+    );
+  }
+
+  /// Prominent "who you're picking up" row for the driver.
+  Widget _riderRow(String rider) {
+    return Row(
+      children: [
+        CircleAvatar(
+          radius: 14,
+          backgroundColor: AppTheme.primaryColor.withValues(alpha: 0.12),
+          child: Icon(Icons.person, size: 16, color: AppTheme.primaryColor),
+        ),
+        const SizedBox(width: 8),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('Rider',
+                  style: GoogleFonts.inter(
+                      fontSize: 11, color: AppTheme.textTertiary)),
+              Text(rider,
+                  style: GoogleFonts.inter(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w700,
+                      color: AppTheme.primaryDark),
+                  overflow: TextOverflow.ellipsis),
+            ],
+          ),
+        ),
+      ],
     );
   }
 
@@ -474,6 +506,7 @@ class _DrivePageState extends State<DrivePage> {
     final dropoff = item['dropoffAddress'] as String?;
     final seats = item['seats'] as int? ?? 0;
     final price = (item['totalPrice'] as num?)?.toDouble() ?? 0;
+    final rider = item['riderName'] as String?;
     final departure = (item['departureTime'] as dynamic)?.toDate() as DateTime?;
     final id = item['id'] as String;
     final claiming = _claiming.contains(id);
@@ -530,6 +563,10 @@ class _DrivePageState extends State<DrivePage> {
             _infoLine(Icons.flag_outlined, dropoff),
           _infoLine(Icons.event_seat_outlined,
               '$seats seat${seats != 1 ? 's' : ''}  \u00b7  \$${price.toStringAsFixed(2)}'),
+          if (rider != null && rider.isNotEmpty) ...[
+            const SizedBox(height: 10),
+            _riderRow(rider),
+          ],
           const SizedBox(height: 12),
           SizedBox(
             width: double.infinity,
