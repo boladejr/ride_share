@@ -183,6 +183,11 @@ class MockDataService {
   List<RouteModel> get routes => List.unmodifiable(_routes);
 
   List<RouteModel> searchRoutes(String origin, String destination, DateTime date) {
+    // Guarantee there are always rides for any requested city pair: if no
+    // seeded route serves this exact origin -> destination, synthesize a few.
+    if (origin.isNotEmpty && destination.isNotEmpty) {
+      _ensureRoutesForPair(origin, destination);
+    }
     return _routes.where((route) {
       final matchOrigin =
           origin.isEmpty || route.origin.toLowerCase().contains(origin.toLowerCase());
@@ -191,6 +196,49 @@ class MockDataService {
       // For demo purposes, always show routes regardless of date
       return matchOrigin && matchDest;
     }).toList();
+  }
+
+  /// Ensures at least a few rides exist for the given city pair. Generated
+  /// routes are deterministic per pair and cached in [_routes], so re-searching
+  /// the same pair doesn't create duplicates and booking/seat lookups by id
+  /// keep working.
+  void _ensureRoutesForPair(String origin, String destination) {
+    final hasExisting = _routes.any((r) =>
+        r.origin.toLowerCase() == origin.toLowerCase() &&
+        r.destination.toLowerCase() == destination.toLowerCase());
+    if (hasExisting) return;
+
+    final slug =
+        '${origin}_$destination'.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]+'), '_');
+    // Vary the lineup deterministically based on the pair name.
+    const lineups = <List<VehicleType>>[
+      [VehicleType.suv, VehicleType.sedan, VehicleType.van],
+      [VehicleType.minivan, VehicleType.luxurySedan, VehicleType.pickup],
+      [VehicleType.sedan, VehicleType.van, VehicleType.suv],
+    ];
+    final lineup = lineups[origin.hashCode.abs() % lineups.length];
+
+    for (var i = 0; i < lineup.length; i++) {
+      final vt = lineup[i];
+      final id = 'gen_${slug}_$i';
+      if (_routes.any((r) => r.id == id)) continue;
+      final hours = 2 + i * 3;
+      final basePrice = 20.0 + (destination.length % 5) * 5 + i * 5;
+      final route = RouteModel(
+        id: id,
+        origin: origin,
+        destination: destination,
+        departureTime: DateTime.now().add(Duration(hours: hours)),
+        duration: Duration(hours: 1 + (i % 3), minutes: 15 * (i % 4)),
+        vehicleType: vt,
+        totalSeats: vt.seatCapacity,
+        availableSeats: vt.seatCapacity,
+        pricePerSeat: basePrice,
+        pickupPoint: '$origin city center',
+        assignedDriverId: null,
+      );
+      addRoute(route);
+    }
   }
 
   RouteModel? getRouteById(String id) {
