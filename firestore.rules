@@ -19,13 +19,23 @@ service cloud.firestore {
                       || resource.data.assignedDriverId == request.auth.uid);
       allow create: if request.auth != null
                     && request.resource.data.userId == request.auth.uid;
-      // A signed-in driver may claim an unassigned booking — the only allowed
-      // update is stamping themselves onto the driver fields.
+      // Two allowed client updates:
+      //  (a) a signed-in driver claims an UNassigned booking by stamping
+      //      themselves onto the driver fields;
+      //  (b) the ASSIGNED driver advances the trip lifecycle (status only).
       allow update: if request.auth != null
-                    && resource.data.assignedDriverId == null
-                    && request.resource.data.assignedDriverId == request.auth.uid
-                    && request.resource.data.diff(resource.data).affectedKeys()
-                         .hasOnly(['assignedDriverId', 'assignedDriverName']);
+                    && (
+                      (resource.data.assignedDriverId == null
+                       && request.resource.data.assignedDriverId == request.auth.uid
+                       && request.resource.data.diff(resource.data).affectedKeys()
+                            .hasOnly(['assignedDriverId', 'assignedDriverName']))
+                      ||
+                      (resource.data.assignedDriverId == request.auth.uid
+                       && request.resource.data.assignedDriverId == resource.data.assignedDriverId
+                       && request.resource.data.diff(resource.data).affectedKeys()
+                            .hasOnly(['status'])
+                       && request.resource.data.status in ['confirmed', 'in_progress', 'completed'])
+                    );
       allow delete: if false;
     }
 

@@ -339,11 +339,25 @@ class _ProfilePageState extends State<ProfilePage> {
       } catch (_) {}
     }
 
-    final statusColor = status == 'confirmed'
-        ? AppTheme.successColor
-        : status == 'cancelled'
-            ? AppTheme.errorColor
-            : Colors.orange;
+    final String statusLabel;
+    final Color statusColor;
+    switch (status) {
+      case 'in_progress':
+        statusLabel = 'Picked up';
+        statusColor = Colors.blue;
+        break;
+      case 'completed':
+        statusLabel = 'Completed';
+        statusColor = AppTheme.textSecondary;
+        break;
+      case 'cancelled':
+        statusLabel = 'Cancelled';
+        statusColor = AppTheme.errorColor;
+        break;
+      default:
+        statusLabel = 'Confirmed';
+        statusColor = AppTheme.successColor;
+    }
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
@@ -377,7 +391,7 @@ class _ProfilePageState extends State<ProfilePage> {
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Text(
-                  status[0].toUpperCase() + status.substring(1),
+                  statusLabel,
                   style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w600, color: statusColor),
                 ),
               ),

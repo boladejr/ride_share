@@ -22,6 +22,7 @@ class _DrivePageState extends State<DrivePage> {
   List<Map<String, dynamic>>? _assigned;
   bool _loadingPending = false;
   final Set<String> _claiming = {};
+  final Set<String> _updatingStatus = {};
   final GlobalKey _formKey = GlobalKey();
   final _nameController = TextEditingController();
   final _emailController = TextEditingController();
@@ -68,6 +69,28 @@ class _DrivePageState extends State<DrivePage> {
         content: Text(ok
             ? 'Ride claimed — it\'s now assigned to you.'
             : 'That ride was already claimed by another driver.'),
+      ),
+    );
+    await _loadPending();
+  }
+
+  Future<void> _updateStatus(Map<String, dynamic> item, String status) async {
+    final id = item['id'] as String;
+    setState(() => _updatingStatus.add(id));
+    final ok = await _dataService.updateTripStatus(
+      bookingDocId: id,
+      driverId: _auth.currentUser?.id ?? '',
+      status: status,
+    );
+    if (!mounted) return;
+    setState(() => _updatingStatus.remove(id));
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(ok
+            ? (status == 'completed'
+                ? 'Trip completed.'
+                : 'Marked as picked up.')
+            : 'Could not update the trip. Please try again.'),
       ),
     );
     await _loadPending();
@@ -360,6 +383,9 @@ class _DrivePageState extends State<DrivePage> {
     final price = (item['totalPrice'] as num?)?.toDouble() ?? 0;
     final rider = item['riderName'] as String?;
     final departure = (item['departureTime'] as dynamic)?.toDate() as DateTime?;
+    final id = item['id'] as String;
+    final status = (item['status'] as String?) ?? 'confirmed';
+    final busy = _updatingStatus.contains(id);
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
@@ -387,19 +413,7 @@ class _DrivePageState extends State<DrivePage> {
                         fontWeight: FontWeight.w700,
                         color: AppTheme.primaryDark)),
               ),
-              Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                decoration: BoxDecoration(
-                  color: Colors.green.withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Text('Assigned to you',
-                    style: GoogleFonts.inter(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w600,
-                        color: Colors.green.shade800)),
-              ),
+              _statusBadge(status),
             ],
           ),
           if (rider != null && rider.isNotEmpty) ...[
@@ -417,8 +431,88 @@ class _DrivePageState extends State<DrivePage> {
             _infoLine(Icons.flag_outlined, dropoff),
           _infoLine(Icons.event_seat_outlined,
               '$seats seat${seats != 1 ? 's' : ''}  \u00b7  \$${price.toStringAsFixed(2)}'),
+          _lifecycleAction(item, status, busy),
         ],
       ),
+    );
+  }
+
+  /// Picked-up / completed buttons (or a done note) for an assigned ride.
+  Widget _lifecycleAction(Map<String, dynamic> item, String status, bool busy) {
+    if (status == 'completed') {
+      return Padding(
+        padding: const EdgeInsets.only(top: 12),
+        child: Row(
+          children: [
+            Icon(Icons.check_circle, size: 18, color: Colors.green.shade600),
+            const SizedBox(width: 6),
+            Text('Trip completed',
+                style: GoogleFonts.inter(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.green.shade700)),
+          ],
+        ),
+      );
+    }
+    final isPickedUp = status == 'in_progress';
+    return Padding(
+      padding: const EdgeInsets.only(top: 12),
+      child: SizedBox(
+        width: double.infinity,
+        child: ElevatedButton.icon(
+          onPressed: busy
+              ? null
+              : () => _updateStatus(
+                  item, isPickedUp ? 'completed' : 'in_progress'),
+          icon: busy
+              ? const SizedBox(
+                  width: 16,
+                  height: 16,
+                  child: CircularProgressIndicator(
+                      strokeWidth: 2, color: Colors.white))
+              : Icon(isPickedUp
+                  ? Icons.flag_outlined
+                  : Icons.directions_car_outlined),
+          label: Text(isPickedUp ? 'Mark completed' : 'Mark picked up'),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: AppTheme.primaryColor,
+            foregroundColor: Colors.white,
+            padding: const EdgeInsets.symmetric(vertical: 12),
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// Small coloured pill reflecting the booking's lifecycle status.
+  Widget _statusBadge(String status) {
+    late final String label;
+    late final MaterialColor color;
+    switch (status) {
+      case 'in_progress':
+        label = 'Picked up';
+        color = Colors.blue;
+        break;
+      case 'completed':
+        label = 'Completed';
+        color = Colors.grey;
+        break;
+      default:
+        label = 'Assigned to you';
+        color = Colors.green;
+    }
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Text(label,
+          style: GoogleFonts.inter(
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+              color: color.shade800)),
     );
   }
 

@@ -382,6 +382,46 @@ class FirestoreDataService {
     }
   }
 
+  /// Advances the lifecycle of a ride the driver is assigned to.
+  /// [status] is `'in_progress'` (picked up) or `'completed'`. On completion the
+  /// driver is freed in the shared pool (busy-until set to now) so they can be
+  /// matched to their next ride immediately.
+  Future<bool> updateTripStatus({
+    required String bookingDocId,
+    required String driverId,
+    required String status,
+  }) async {
+    if (!_useFirestore || bookingDocId.isEmpty) return false;
+    _init();
+    final bookingRef = _firestore!.collection('bookings').doc(bookingDocId);
+    final driverRef =
+        driverId.isNotEmpty ? _activeDrivers.doc(driverId) : null;
+    try {
+      return await _firestore!.runTransaction<bool>((tx) async {
+        final bookingDoc = await tx.get(bookingRef);
+        if (!bookingDoc.exists) return false;
+        // Reads must precede writes: fetch the driver doc up front if needed.
+        final driverDoc = (status == 'completed' && driverRef != null)
+            ? await tx.get(driverRef)
+            : null;
+
+        tx.update(bookingRef, {'status': status});
+
+        if (status == 'completed' &&
+            driverRef != null &&
+            driverDoc != null &&
+            driverDoc.exists) {
+          tx.update(driverRef, {
+            'busyUntil': Timestamp.fromDate(DateTime.now()),
+          });
+        }
+        return true;
+      });
+    } catch (_) {
+      return false;
+    }
+  }
+
   Future<void> saveDriverApplication({
     required String userId,
     required String name,
