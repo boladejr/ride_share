@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import '../models/route_model.dart';
+import '../models/vehicle_type.dart';
 import '../services/firestore_data_service.dart';
 import '../theme.dart';
 import 'checkout_page.dart';
@@ -235,7 +236,7 @@ class _SeatSelectionPageState extends State<SeatSelectionPage> {
                           Icon(Icons.airline_seat_recline_normal_outlined, size: 16, color: AppTheme.primaryColor),
                           const SizedBox(width: 6),
                           Text(
-                            'Comfortable ride \u00b7 ${widget.route.totalSeats} seats',
+                            '${widget.route.vehicleType.label} \u00b7 ${widget.route.totalSeats} seats',
                             style: GoogleFonts.inter(fontSize: 12, color: AppTheme.primaryColor, fontWeight: FontWeight.w500),
                           ),
                         ],

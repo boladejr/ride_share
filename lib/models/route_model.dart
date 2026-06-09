@@ -1,3 +1,5 @@
+import 'vehicle_type.dart';
+
 class RouteModel {
   final String id;
   final String origin;
@@ -9,6 +11,7 @@ class RouteModel {
   final double pricePerSeat;
   final String pickupPoint;
   final String? assignedDriverId;
+  final VehicleType vehicleType;
 
   RouteModel({
     required this.id,
@@ -21,6 +24,7 @@ class RouteModel {
     required this.pricePerSeat,
     required this.pickupPoint,
     this.assignedDriverId,
+    this.vehicleType = VehicleType.sedan,
   });
 
   RouteModel copyWith({
@@ -34,6 +38,7 @@ class RouteModel {
     double? pricePerSeat,
     String? pickupPoint,
     String? assignedDriverId,
+    VehicleType? vehicleType,
   }) {
     return RouteModel(
       id: id ?? this.id,
@@ -46,6 +51,7 @@ class RouteModel {
       pricePerSeat: pricePerSeat ?? this.pricePerSeat,
       pickupPoint: pickupPoint ?? this.pickupPoint,
       assignedDriverId: assignedDriverId ?? this.assignedDriverId,
+      vehicleType: vehicleType ?? this.vehicleType,
     );
   }
 }

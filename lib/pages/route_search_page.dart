@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import '../models/route_model.dart';
+import '../models/vehicle_type.dart';
 import '../services/firestore_data_service.dart';
 import '../theme.dart';
 import 'seat_selection_page.dart';
@@ -291,10 +292,30 @@ class _RouteCard extends StatelessWidget {
                 ),
               ),
 
-              // Driver preview + seats + price row
+              // Vehicle + seats + price row
               Row(
                 children: [
-                  // Driver preview
+                  // Vehicle type pill
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                    decoration: BoxDecoration(
+                      color: AppTheme.primaryColor.withValues(alpha: 0.08),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.directions_car_outlined, size: 14, color: AppTheme.primaryColor),
+                        const SizedBox(width: 4),
+                        Text(
+                          route.vehicleType.label,
+                          style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: AppTheme.primaryColor),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  // Seats left
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                     decoration: BoxDecoration(
@@ -304,7 +325,7 @@ class _RouteCard extends StatelessWidget {
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Icon(Icons.directions_car_outlined, size: 14, color: AppTheme.textSecondary),
+                        Icon(Icons.event_seat_outlined, size: 14, color: AppTheme.textSecondary),
                         const SizedBox(width: 4),
                         Text(
                           '${route.availableSeats} seat${route.availableSeats != 1 ? 's' : ''} left',
