@@ -164,6 +164,20 @@ class _DrivePageState extends State<DrivePage> {
     if (_auth.isLoggedIn && _auth.isDriver) {
       _subscribeFeeds();
     }
+
+    // Retroactively pull in any already-pending rides headed their way.
+    final matched = await _dataService.retroMatchDriver(
+      driverId: _auth.currentUser?.id ?? '',
+      driverName: _auth.currentUser?.name ?? 'Driver',
+    );
+    if (mounted && matched > 0) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+              'You were matched with $matched pending ride${matched != 1 ? 's' : ''}.'),
+        ),
+      );
+    }
   }
 
   @override

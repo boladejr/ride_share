@@ -422,6 +422,66 @@ class FirestoreDataService {
     }
   }
 
+  /// After a driver becomes active, auto-claim any already-open pending rides
+  /// they're eligible for: the ride's origin matches the driver's current
+  /// location (or they're brand-new with no location yet), processed in
+  /// departure order so their location chains across successive claims.
+  /// Returns how many rides were retroactively assigned.
+  Future<int> retroMatchDriver({
+    required String driverId,
+    required String driverName,
+  }) async {
+    if (!_useFirestore || driverId.isEmpty) return 0;
+    _init();
+    int claimed = 0;
+    try {
+      final driverSnap = await _activeDrivers.doc(driverId).get();
+      String? city = driverSnap.data()?['currentCity'] as String?;
+
+      final openSnap = await _firestore!
+          .collection('pending_assignments')
+          .where('status', isEqualTo: 'open')
+          .get();
+      final open = openSnap.docs.toList()
+        ..sort((a, b) {
+          final at = a.data()['departureTime'] as Timestamp?;
+          final bt = b.data()['departureTime'] as Timestamp?;
+          if (at == null && bt == null) return 0;
+          if (at == null) return 1;
+          if (bt == null) return -1;
+          return at.compareTo(bt);
+        });
+
+      for (final doc in open) {
+        final data = doc.data();
+        final origin = data['origin'] as String?;
+        final dest = data['destination'] as String?;
+        final bookingDocId = data['bookingDocId'] as String?;
+        if (origin == null || bookingDocId == null) continue;
+
+        // Direction-aware: a brand-new driver (no city) can take a first ride
+        // from anywhere; afterwards they chain from their last destination.
+        final cityOk =
+            city == null || city.toLowerCase() == origin.toLowerCase();
+        if (!cityOk) continue;
+
+        final ok = await claimAssignment(
+          assignmentId: doc.id,
+          bookingDocId: bookingDocId,
+          driverId: driverId,
+          driverName: driverName,
+        );
+        if (ok) {
+          claimed++;
+          if (dest != null) city = dest;
+        }
+      }
+    } catch (_) {
+      // Best-effort; un-matched rides simply stay in the open queue.
+    }
+    return claimed;
+  }
+
   Future<void> saveDriverApplication({
     required String userId,
     required String name,
