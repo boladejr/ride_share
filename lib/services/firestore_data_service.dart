@@ -617,6 +617,54 @@ class FirestoreDataService {
             _withIds(s)..sort((a, b) => _byTimestamp(a, b, 'createdAt', true)));
   }
 
+  CollectionReference<Map<String, dynamic>> get _ratings =>
+      _firestore!.collection('ratings');
+
+  /// Live stream of the ratings a rider has left, keyed by the rated booking's
+  /// doc id, so My Trips can show which completed trips are already rated.
+  Stream<Map<String, Map<String, dynamic>>> userRatingsStream(String riderId) {
+    if (!_useFirestore || riderId.isEmpty) {
+      return Stream.value(<String, Map<String, dynamic>>{});
+    }
+    _init();
+    return _ratings.where('riderId', isEqualTo: riderId).snapshots().map((s) {
+      final map = <String, Map<String, dynamic>>{};
+      for (final doc in s.docs) {
+        final bookingDocId = doc.data()['bookingDocId'] as String?;
+        if (bookingDocId != null) map[bookingDocId] = doc.data();
+      }
+      return map;
+    });
+  }
+
+  /// Submits (or updates) a rider's rating for a completed trip. The rating doc
+  /// id is the booking's doc id, so there's exactly one rating per booking.
+  Future<bool> submitRating({
+    required String bookingDocId,
+    required String riderId,
+    required String driverId,
+    required String driverName,
+    required int rating,
+    String? review,
+  }) async {
+    if (!_useFirestore || bookingDocId.isEmpty || riderId.isEmpty) return false;
+    _init();
+    try {
+      await _ratings.doc(bookingDocId).set({
+        'bookingDocId': bookingDocId,
+        'riderId': riderId,
+        'driverId': driverId,
+        'driverName': driverName,
+        'rating': rating,
+        'review': review ?? '',
+        'createdAt': FieldValue.serverTimestamp(),
+      });
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
+
   Future<List<Map<String, dynamic>>> getUserBookings(String userId) async {
     if (!_useFirestore) return [];
     _init();

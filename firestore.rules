@@ -77,6 +77,21 @@ service cloud.firestore {
       allow delete: if false;
     }
 
+    // Trip ratings. A rider rates the driver after a completed trip; the doc id
+    // is the booking's doc id (one rating per trip). A rider may write/read only
+    // their own rating (1–5), and the rated driver may read ratings about them.
+    match /ratings/{ratingId} {
+      allow read: if request.auth != null
+                  && (resource.data.riderId == request.auth.uid
+                      || resource.data.driverId == request.auth.uid);
+      allow create, update: if request.auth != null
+                    && request.resource.data.riderId == request.auth.uid
+                    && request.resource.data.rating is int
+                    && request.resource.data.rating >= 1
+                    && request.resource.data.rating <= 5;
+      allow delete: if false;
+    }
+
     // Driver applications: a signed-in user may submit their own application.
     // Applications are reviewed out-of-band, so no client reads/edits.
     match /driver_applications/{appId} {

@@ -31,6 +31,9 @@ class _ProfilePageState extends State<ProfilePage> {
   List<Map<String, dynamic>> _bookings = [];
   bool _loadingBookings = true;
   StreamSubscription? _bookingsSub;
+  Map<String, Map<String, dynamic>> _ratings = {};
+  StreamSubscription? _ratingsSub;
+  final Set<String> _savingRating = {};
 
   @override
   void initState() {
@@ -75,11 +78,16 @@ class _ProfilePageState extends State<ProfilePage> {
         if (mounted) setState(() => _loadingBookings = false);
       },
     );
+    _ratingsSub?.cancel();
+    _ratingsSub = _firestoreService.userRatingsStream(user.id).listen((r) {
+      if (mounted) setState(() => _ratings = r);
+    });
   }
 
   @override
   void dispose() {
     _bookingsSub?.cancel();
+    _ratingsSub?.cancel();
     _nameController.dispose();
     _phoneController.dispose();
     _addressController.dispose();
@@ -337,6 +345,8 @@ class _ProfilePageState extends State<ProfilePage> {
     final pickupAddress = booking['pickupAddress'] as String?;
     final dropoffAddress = booking['dropoffAddress'] as String?;
     final driverName = booking['assignedDriverName'] as String?;
+    final bookingDocId = booking['id'] as String?;
+    final driverId = booking['assignedDriverId'] as String?;
 
     DateTime? bookingDate;
     if (createdAt != null) {
@@ -485,7 +495,164 @@ class _ProfilePageState extends State<ProfilePage> {
               ],
             ),
           ],
+          if (status == 'completed' &&
+              driverName != null &&
+              driverName.isNotEmpty &&
+              bookingDocId != null)
+            _ratingSection(bookingDocId, driverId, driverName),
         ],
+      ),
+    );
+  }
+
+  /// Read-only row of 5 stars reflecting [n] (1–5).
+  Widget _starsDisplay(int n) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: List.generate(
+        5,
+        (i) => Icon(i < n ? Icons.star : Icons.star_border,
+            size: 16, color: Colors.amber.shade700),
+      ),
+    );
+  }
+
+  /// Rating UI for a completed trip: shows the submitted rating, or a button to
+  /// leave one.
+  Widget _ratingSection(
+      String bookingDocId, String? driverId, String driverName) {
+    final existing = _ratings[bookingDocId];
+    final saving = _savingRating.contains(bookingDocId);
+    if (existing != null) {
+      final stars = (existing['rating'] as num?)?.toInt() ?? 0;
+      final review = (existing['review'] as String?) ?? '';
+      return Padding(
+        padding: const EdgeInsets.only(top: 10),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Text('Your rating',
+                    style: GoogleFonts.inter(
+                        fontSize: 11, color: AppTheme.textTertiary)),
+                const SizedBox(width: 8),
+                _starsDisplay(stars),
+                const Spacer(),
+                TextButton(
+                  onPressed: saving
+                      ? null
+                      : () => _showRatingDialog(
+                          bookingDocId, driverId, driverName,
+                          initial: existing),
+                  style: TextButton.styleFrom(
+                      padding: EdgeInsets.zero,
+                      minimumSize: const Size(0, 0),
+                      tapTargetSize: MaterialTapTargetSize.shrinkWrap),
+                  child: Text('Edit',
+                      style: GoogleFonts.inter(
+                          fontSize: 11, fontWeight: FontWeight.w600)),
+                ),
+              ],
+            ),
+            if (review.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.only(top: 2),
+                child: Text('“$review”',
+                    style: GoogleFonts.inter(
+                        fontSize: 11,
+                        fontStyle: FontStyle.italic,
+                        color: AppTheme.textSecondary)),
+              ),
+          ],
+        ),
+      );
+    }
+    return Padding(
+      padding: const EdgeInsets.only(top: 10),
+      child: OutlinedButton.icon(
+        onPressed: saving
+            ? null
+            : () => _showRatingDialog(bookingDocId, driverId, driverName),
+        icon: const Icon(Icons.star_border, size: 16),
+        label: const Text('Rate your driver'),
+        style: OutlinedButton.styleFrom(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+          textStyle: GoogleFonts.inter(
+              fontSize: 12, fontWeight: FontWeight.w600),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _showRatingDialog(
+      String bookingDocId, String? driverId, String driverName,
+      {Map<String, dynamic>? initial}) async {
+    int selected = (initial?['rating'] as num?)?.toInt() ?? 5;
+    final controller =
+        TextEditingController(text: (initial?['review'] as String?) ?? '');
+    final submit = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setLocal) => AlertDialog(
+          title: Text('Rate $driverName',
+              style: GoogleFonts.inter(fontWeight: FontWeight.w700)),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: List.generate(
+                  5,
+                  (i) => IconButton(
+                    onPressed: () => setLocal(() => selected = i + 1),
+                    icon: Icon(
+                      i < selected ? Icons.star : Icons.star_border,
+                      color: Colors.amber.shade700,
+                      size: 32,
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 8),
+              TextField(
+                controller: controller,
+                maxLines: 3,
+                decoration: const InputDecoration(
+                  hintText: 'Add a review (optional)',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+                onPressed: () => Navigator.pop(ctx, false),
+                child: const Text('Cancel')),
+            ElevatedButton(
+                onPressed: () => Navigator.pop(ctx, true),
+                child: const Text('Submit')),
+          ],
+        ),
+      ),
+    );
+    if (submit != true) return;
+    setState(() => _savingRating.add(bookingDocId));
+    final ok = await _firestoreService.submitRating(
+      bookingDocId: bookingDocId,
+      riderId: _auth.currentUser?.id ?? '',
+      driverId: driverId ?? '',
+      driverName: driverName,
+      rating: selected,
+      review: controller.text.trim(),
+    );
+    if (!mounted) return;
+    setState(() => _savingRating.remove(bookingDocId));
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(ok
+            ? 'Thanks for rating $driverName!'
+            : 'Could not save your rating. Please try again.'),
       ),
     );
   }
