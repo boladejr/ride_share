@@ -91,8 +91,6 @@ class RidesharePage extends StatelessWidget {
               children: [
                 _statItem('6+', 'Texas cities'),
                 _statDivider(),
-                _statItem('3', 'seats per car'),
-                _statDivider(),
                 _statItem('\$25', 'starting price'),
                 _statDivider(),
                 _statItem('500+', 'trips completed'),

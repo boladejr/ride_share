@@ -218,6 +218,10 @@ class MockDataService {
     ];
     final lineup = lineups[origin.hashCode.abs() % lineups.length];
 
+    // Travel time depends only on the city pair, not the vehicle — so every
+    // ride for the same origin -> destination shows the same trip duration.
+    final pairDuration = _durationForPair(origin, destination);
+
     for (var i = 0; i < lineup.length; i++) {
       final vt = lineup[i];
       final id = 'gen_${slug}_$i';
@@ -229,7 +233,7 @@ class MockDataService {
         origin: origin,
         destination: destination,
         departureTime: DateTime.now().add(Duration(hours: hours)),
-        duration: Duration(hours: 1 + (i % 3), minutes: 15 * (i % 4)),
+        duration: pairDuration,
         vehicleType: vt,
         totalSeats: vt.seatCapacity,
         availableSeats: vt.seatCapacity,
@@ -239,6 +243,15 @@ class MockDataService {
       );
       addRoute(route);
     }
+  }
+
+  /// Deterministic travel time for a city pair (same in both directions),
+  /// independent of vehicle type. Ranges ~1h30m–5h00m in 30-minute steps.
+  Duration _durationForPair(String origin, String destination) {
+    final key = ([origin.toLowerCase(), destination.toLowerCase()]..sort())
+        .join('_');
+    final steps = key.hashCode.abs() % 8; // 0..7
+    return Duration(minutes: 90 + steps * 30);
   }
 
   RouteModel? getRouteById(String id) {
