@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import '../models/route_model.dart';
-import '../services/mock_data_service.dart';
+import '../models/vehicle_type.dart';
+import '../services/firestore_data_service.dart';
 import '../theme.dart';
 import 'seat_selection_page.dart';
 
@@ -10,25 +11,33 @@ class RouteSearchPage extends StatelessWidget {
   final String origin;
   final String destination;
   final DateTime date;
+  final String? pickupAddress;
+  final String? dropoffAddress;
 
   const RouteSearchPage({
     super.key,
     required this.origin,
     required this.destination,
     required this.date,
+    this.pickupAddress,
+    this.dropoffAddress,
   });
 
   @override
   Widget build(BuildContext context) {
-    final dataService = MockDataService();
-    final routes = dataService.searchRoutes(origin, destination, date);
-
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
         title: Text('$origin → $destination'),
       ),
-      body: Column(
+      body: FutureBuilder<List<RouteModel>>(
+        future: FirestoreDataService().searchRoutes(origin, destination, date),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          }
+          final routes = snapshot.data ?? [];
+          return Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // Date + results count header
@@ -45,6 +54,24 @@ class RouteSearchPage extends StatelessWidget {
                         DateFormat('EEEE, MMMM d, yyyy').format(date),
                         style: GoogleFonts.inter(fontSize: 14, color: AppTheme.textSecondary),
                       ),
+                      if (pickupAddress != null)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 4),
+                          child: Text(
+                            'From: $pickupAddress',
+                            style: GoogleFonts.inter(fontSize: 11, color: AppTheme.textTertiary),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      if (dropoffAddress != null)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 2),
+                          child: Text(
+                            'To: $dropoffAddress',
+                            style: GoogleFonts.inter(fontSize: 11, color: AppTheme.textTertiary),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
                       if (routes.isNotEmpty)
                         Padding(
                           padding: const EdgeInsets.only(top: 4),
@@ -107,11 +134,17 @@ class RouteSearchPage extends StatelessWidget {
                     padding: const EdgeInsets.all(20),
                     itemCount: routes.length,
                     itemBuilder: (context, index) {
-                      return _RouteCard(route: routes[index]);
+                      return _RouteCard(
+                        route: routes[index],
+                        pickupAddress: pickupAddress,
+                        dropoffAddress: dropoffAddress,
+                      );
                     },
                   ),
           ),
-        ],
+            ],
+          );
+        },
       ),
     );
   }
@@ -119,8 +152,14 @@ class RouteSearchPage extends StatelessWidget {
 
 class _RouteCard extends StatelessWidget {
   final RouteModel route;
+  final String? pickupAddress;
+  final String? dropoffAddress;
 
-  const _RouteCard({required this.route});
+  const _RouteCard({
+    required this.route,
+    this.pickupAddress,
+    this.dropoffAddress,
+  });
 
   String _formatDuration(Duration d) {
     final hours = d.inHours;
@@ -148,7 +187,11 @@ class _RouteCard extends StatelessWidget {
             ? () => Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (_) => SeatSelectionPage(route: route),
+                    builder: (_) => SeatSelectionPage(
+                      route: route,
+                      pickupAddress: pickupAddress,
+                      dropoffAddress: dropoffAddress,
+                    ),
                   ),
                 )
             : null,
@@ -249,10 +292,30 @@ class _RouteCard extends StatelessWidget {
                 ),
               ),
 
-              // Driver preview + seats + price row
+              // Vehicle + seats + price row
               Row(
                 children: [
-                  // Driver preview
+                  // Vehicle type pill
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                    decoration: BoxDecoration(
+                      color: AppTheme.primaryColor.withValues(alpha: 0.08),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.directions_car_outlined, size: 14, color: AppTheme.primaryColor),
+                        const SizedBox(width: 4),
+                        Text(
+                          route.vehicleType.label,
+                          style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: AppTheme.primaryColor),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  // Seats left
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                     decoration: BoxDecoration(
@@ -262,7 +325,7 @@ class _RouteCard extends StatelessWidget {
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Icon(Icons.directions_car_outlined, size: 14, color: AppTheme.textSecondary),
+                        Icon(Icons.event_seat_outlined, size: 14, color: AppTheme.textSecondary),
                         const SizedBox(width: 4),
                         Text(
                           '${route.availableSeats} seat${route.availableSeats != 1 ? 's' : ''} left',
@@ -288,7 +351,16 @@ class _RouteCard extends StatelessWidget {
                 height: 48,
                 child: ElevatedButton(
                   onPressed: route.availableSeats > 0
-                      ? () => Navigator.push(context, MaterialPageRoute(builder: (_) => SeatSelectionPage(route: route)))
+                      ? () => Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => SeatSelectionPage(
+                                route: route,
+                                pickupAddress: pickupAddress,
+                                dropoffAddress: dropoffAddress,
+                              ),
+                            ),
+                          )
                       : null,
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.center,

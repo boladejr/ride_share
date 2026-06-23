@@ -1,19 +1,27 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
+import '../models/booking_model.dart';
 import '../models/route_model.dart';
-import '../services/mock_data_service.dart';
+import '../services/firebase_auth_service.dart';
+import '../services/firestore_data_service.dart';
 import '../theme.dart';
+import 'login_page.dart';
+import 'signup_page.dart';
 import 'trip_confirmation_page.dart';
 
 class CheckoutPage extends StatefulWidget {
   final RouteModel route;
   final List<int> selectedSeats;
+  final String? pickupAddress;
+  final String? dropoffAddress;
 
   const CheckoutPage({
     super.key,
     required this.route,
     required this.selectedSeats,
+    this.pickupAddress,
+    this.dropoffAddress,
   });
 
   @override
@@ -21,7 +29,7 @@ class CheckoutPage extends StatefulWidget {
 }
 
 class _CheckoutPageState extends State<CheckoutPage> {
-  final _dataService = MockDataService();
+  final _dataService = FirestoreDataService();
   final _cardNumberController = TextEditingController();
   final _expiryController = TextEditingController();
   final _cvvController = TextEditingController();
@@ -31,6 +39,13 @@ class _CheckoutPageState extends State<CheckoutPage> {
   double get _totalPrice => widget.selectedSeats.length * widget.route.pricePerSeat;
 
   Future<void> _confirmAndPay() async {
+    // Booking requires a signed-in account (Firestore rules reject anonymous
+    // writes). Gate here so the rules never silently fail mid-checkout.
+    if (!FirebaseAuthService().isLoggedIn) {
+      _promptLogin();
+      return;
+    }
+
     if (_cardNumberController.text.isEmpty ||
         _expiryController.text.isEmpty ||
         _cvvController.text.isEmpty ||
@@ -46,12 +61,47 @@ class _CheckoutPageState extends State<CheckoutPage> {
     // Simulate Stripe payment processing
     await Future.delayed(const Duration(seconds: 2));
 
-    // Create booking in mock Firestore
-    final booking = _dataService.createBooking(
-      routeId: widget.route.id,
-      seatNumbers: widget.selectedSeats,
-      totalPrice: _totalPrice,
-    );
+    final auth = FirebaseAuthService();
+    final riderId = auth.currentUser?.id ?? 'guest';
+    final riderName =
+        auth.currentUser?.name ?? (_nameController.text.trim().isNotEmpty
+            ? _nameController.text.trim()
+            : 'Guest');
+
+    BookingModel booking;
+    try {
+      // Atomically re-checks seat availability, marks seats taken, assigns a
+      // driver, and writes the booking — shared across all users.
+      booking = await _dataService.createBooking(
+        routeId: widget.route.id,
+        seatNumbers: widget.selectedSeats,
+        totalPrice: _totalPrice,
+        riderId: riderId,
+        riderName: riderName,
+        pickupAddress: widget.pickupAddress ?? widget.route.pickupPoint,
+        dropoffAddress: widget.dropoffAddress,
+      );
+    } on SeatUnavailableException catch (e) {
+      if (!mounted) return;
+      setState(() => _processing = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Seat${e.seats.length > 1 ? 's' : ''} ${e.seats.join(', ')} '
+            'just got booked. Please pick another seat.',
+          ),
+        ),
+      );
+      Navigator.pop(context); // back to seat selection to reselect
+      return;
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _processing = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Booking failed. Please try again.')),
+      );
+      return;
+    }
 
     if (!mounted) return;
     setState(() => _processing = false);
@@ -60,9 +110,75 @@ class _CheckoutPageState extends State<CheckoutPage> {
     Navigator.pushAndRemoveUntil(
       context,
       MaterialPageRoute(
-        builder: (_) => TripConfirmationPage(bookingId: booking.id),
+        builder: (_) => TripConfirmationPage(booking: booking),
       ),
       (route) => route.isFirst,
+    );
+  }
+
+  void _promptLogin() {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Log in to book'),
+        content: const Text(
+          'Please log in or create an account to complete your booking.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(ctx);
+              _openLogin();
+            },
+            child: const Text('Log in'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _openLogin() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => LoginPage(
+          onSuccess: () {
+            Navigator.pop(context);
+            setState(() {});
+          },
+          onSignUpTap: () {
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(
+                builder: (_) => SignUpPage(
+                  onSuccess: () {
+                    Navigator.pop(context);
+                    setState(() {});
+                  },
+                  onLoginTap: () {
+                    Navigator.pushReplacement(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => LoginPage(
+                          onSuccess: () {
+                            Navigator.pop(context);
+                            setState(() {});
+                          },
+                          onSignUpTap: () => Navigator.pop(context),
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ),
+            );
+          },
+        ),
+      ),
     );
   }
 

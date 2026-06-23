@@ -2,6 +2,7 @@ import 'package:uuid/uuid.dart';
 import '../models/route_model.dart';
 import '../models/booking_model.dart';
 import '../models/driver_model.dart';
+import '../models/vehicle_type.dart';
 
 class MockDataService {
   static final MockDataService _instance = MockDataService._internal();
@@ -18,8 +19,9 @@ class MockDataService {
       destination: 'San Antonio',
       departureTime: DateTime.now().add(const Duration(hours: 3)),
       duration: const Duration(hours: 1, minutes: 20),
-      totalSeats: 3,
-      availableSeats: 2,
+      vehicleType: VehicleType.suv,
+      totalSeats: VehicleType.suv.seatCapacity,
+      availableSeats: VehicleType.suv.seatCapacity - 1,
       pricePerSeat: 25.0,
       pickupPoint: '800 Brazos St, Austin, TX 78701',
       assignedDriverId: 'driver_1',
@@ -30,8 +32,9 @@ class MockDataService {
       destination: 'Houston',
       departureTime: DateTime.now().add(const Duration(hours: 5)),
       duration: const Duration(hours: 2, minutes: 45),
-      totalSeats: 3,
-      availableSeats: 3,
+      vehicleType: VehicleType.van,
+      totalSeats: VehicleType.van.seatCapacity,
+      availableSeats: VehicleType.van.seatCapacity,
       pricePerSeat: 35.0,
       pickupPoint: '600 Congress Ave, Austin, TX 78701',
       assignedDriverId: 'driver_2',
@@ -42,8 +45,9 @@ class MockDataService {
       destination: 'Dallas',
       departureTime: DateTime.now().add(const Duration(hours: 6)),
       duration: const Duration(hours: 3, minutes: 15),
-      totalSeats: 3,
-      availableSeats: 1,
+      vehicleType: VehicleType.sedan,
+      totalSeats: VehicleType.sedan.seatCapacity,
+      availableSeats: VehicleType.sedan.seatCapacity - 2,
       pricePerSeat: 40.0,
       pickupPoint: '1100 S Congress Ave, Austin, TX 78704',
       assignedDriverId: null,
@@ -54,8 +58,9 @@ class MockDataService {
       destination: 'Austin',
       departureTime: DateTime.now().add(const Duration(hours: 4)),
       duration: const Duration(hours: 1, minutes: 20),
-      totalSeats: 3,
-      availableSeats: 1,
+      vehicleType: VehicleType.minivan,
+      totalSeats: VehicleType.minivan.seatCapacity,
+      availableSeats: VehicleType.minivan.seatCapacity - 2,
       pricePerSeat: 25.0,
       pickupPoint: '300 Alamo Plaza, San Antonio, TX 78205',
       assignedDriverId: 'driver_1',
@@ -66,8 +71,9 @@ class MockDataService {
       destination: 'Austin',
       departureTime: DateTime.now().add(const Duration(hours: 8)),
       duration: const Duration(hours: 2, minutes: 45),
-      totalSeats: 3,
-      availableSeats: 3,
+      vehicleType: VehicleType.luxurySedan,
+      totalSeats: VehicleType.luxurySedan.seatCapacity,
+      availableSeats: VehicleType.luxurySedan.seatCapacity,
       pricePerSeat: 35.0,
       pickupPoint: '1001 Avenida de las Americas, Houston, TX 77010',
       assignedDriverId: 'driver_3',
@@ -78,8 +84,9 @@ class MockDataService {
       destination: 'Houston',
       departureTime: DateTime.now().add(const Duration(hours: 7)),
       duration: const Duration(hours: 3),
-      totalSeats: 3,
-      availableSeats: 2,
+      vehicleType: VehicleType.pickup,
+      totalSeats: VehicleType.pickup.seatCapacity,
+      availableSeats: VehicleType.pickup.seatCapacity - 1,
       pricePerSeat: 30.0,
       pickupPoint: '100 E Houston St, San Antonio, TX 78205',
       assignedDriverId: null,
@@ -176,6 +183,11 @@ class MockDataService {
   List<RouteModel> get routes => List.unmodifiable(_routes);
 
   List<RouteModel> searchRoutes(String origin, String destination, DateTime date) {
+    // Guarantee there are always rides for any requested city pair: if no
+    // seeded route serves this exact origin -> destination, synthesize a few.
+    if (origin.isNotEmpty && destination.isNotEmpty) {
+      _ensureRoutesForPair(origin, destination);
+    }
     return _routes.where((route) {
       final matchOrigin =
           origin.isEmpty || route.origin.toLowerCase().contains(origin.toLowerCase());
@@ -184,6 +196,62 @@ class MockDataService {
       // For demo purposes, always show routes regardless of date
       return matchOrigin && matchDest;
     }).toList();
+  }
+
+  /// Ensures at least a few rides exist for the given city pair. Generated
+  /// routes are deterministic per pair and cached in [_routes], so re-searching
+  /// the same pair doesn't create duplicates and booking/seat lookups by id
+  /// keep working.
+  void _ensureRoutesForPair(String origin, String destination) {
+    final hasExisting = _routes.any((r) =>
+        r.origin.toLowerCase() == origin.toLowerCase() &&
+        r.destination.toLowerCase() == destination.toLowerCase());
+    if (hasExisting) return;
+
+    final slug =
+        '${origin}_$destination'.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]+'), '_');
+    // Vary the lineup deterministically based on the pair name.
+    const lineups = <List<VehicleType>>[
+      [VehicleType.suv, VehicleType.sedan, VehicleType.van],
+      [VehicleType.minivan, VehicleType.luxurySedan, VehicleType.pickup],
+      [VehicleType.sedan, VehicleType.van, VehicleType.suv],
+    ];
+    final lineup = lineups[origin.hashCode.abs() % lineups.length];
+
+    // Travel time depends only on the city pair, not the vehicle — so every
+    // ride for the same origin -> destination shows the same trip duration.
+    final pairDuration = _durationForPair(origin, destination);
+
+    for (var i = 0; i < lineup.length; i++) {
+      final vt = lineup[i];
+      final id = 'gen_${slug}_$i';
+      if (_routes.any((r) => r.id == id)) continue;
+      final hours = 2 + i * 3;
+      final basePrice = 20.0 + (destination.length % 5) * 5 + i * 5;
+      final route = RouteModel(
+        id: id,
+        origin: origin,
+        destination: destination,
+        departureTime: DateTime.now().add(Duration(hours: hours)),
+        duration: pairDuration,
+        vehicleType: vt,
+        totalSeats: vt.seatCapacity,
+        availableSeats: vt.seatCapacity,
+        pricePerSeat: basePrice,
+        pickupPoint: '$origin city center',
+        assignedDriverId: null,
+      );
+      addRoute(route);
+    }
+  }
+
+  /// Deterministic travel time for a city pair (same in both directions),
+  /// independent of vehicle type. Ranges ~1h30m–5h00m in 30-minute steps.
+  Duration _durationForPair(String origin, String destination) {
+    final key = ([origin.toLowerCase(), destination.toLowerCase()]..sort())
+        .join('_');
+    final steps = key.hashCode.abs() % 8; // 0..7
+    return Duration(minutes: 90 + steps * 30);
   }
 
   RouteModel? getRouteById(String id) {
@@ -252,6 +320,8 @@ class MockDataService {
     required List<int> seatNumbers,
     required double totalPrice,
   }) {
+    // Ensure the route has a driver before confirming the booking.
+    final driver = assignDriverForRoute(routeId);
     final route = getRouteById(routeId)!;
     final booking = BookingModel(
       id: 'BK-${_uuid.v4().substring(0, 6).toUpperCase()}',
@@ -267,6 +337,8 @@ class MockDataService {
       tripStatus: TripStatus.notStarted,
       paymentStatus: PaymentStatus.paid,
       bookingDate: DateTime.now(),
+      assignedDriverId: driver?.id,
+      assignedDriverName: driver?.name,
     );
     _bookings.add(booking);
     bookSeats(routeId, seatNumbers);
@@ -302,6 +374,56 @@ class MockDataService {
     }
   }
 
+  /// Adds a newly registered driver to the active assignment pool immediately
+  /// (no approval step). A fresh driver has no assigned routes, so their
+  /// "current city" is unknown and they can be matched to a ride departing from
+  /// any city for their first trip. After that they chain from their last
+  /// drop-off. Idempotent by id.
+  void addActiveDriver({
+    required String id,
+    required String name,
+    required String email,
+    required String phone,
+  }) {
+    if (id.isEmpty || _drivers.any((d) => d.id == id)) return;
+    _drivers.add(DriverModel(
+      id: id,
+      name: name,
+      email: email,
+      phone: phone,
+      assignedRouteIds: const [],
+      totalPayout: 0.0,
+    ));
+  }
+
+  /// The city a driver is currently in / will end up at: the destination of
+  /// their most recent assigned route. Null means a brand-new driver with no
+  /// trips yet, who is therefore available to start from any origin.
+  String? driverCurrentCity(DriverModel driver) {
+    final latest = _latestRouteFor(driver);
+    return latest?.destination;
+  }
+
+  /// When the driver becomes free again: the end time of their latest assigned
+  /// route. Null means they have no trips and are free now.
+  DateTime? driverBusyUntil(DriverModel driver) {
+    final latest = _latestRouteFor(driver);
+    if (latest == null) return null;
+    return latest.departureTime.add(latest.duration);
+  }
+
+  RouteModel? _latestRouteFor(DriverModel driver) {
+    RouteModel? latest;
+    for (final id in driver.assignedRouteIds) {
+      final r = getRouteById(id);
+      if (r == null) continue;
+      if (latest == null || r.departureTime.isAfter(latest.departureTime)) {
+        latest = r;
+      }
+    }
+    return latest;
+  }
+
   List<RouteModel> getRoutesForDriver(String driverId) {
     return _routes.where((r) => r.assignedDriverId == driverId).toList();
   }
@@ -315,6 +437,58 @@ class MockDataService {
         assignedRouteIds: [...driver.assignedRouteIds, routeId],
       );
     }
+  }
+
+  /// v1 driver-assignment algorithm.
+  ///
+  /// Ensures [routeId] has a driver and returns the assigned driver:
+  /// - If the route already has a driver, that driver is kept.
+  /// - Otherwise, among drivers with no time-conflicting route, the one with
+  ///   the fewest current assignments is chosen (load-balanced), with a
+  ///   deterministic tie-break by id.
+  /// - Returns null if no driver is eligible (route stays pending).
+  DriverModel? assignDriverForRoute(String routeId) {
+    final route = getRouteById(routeId);
+    if (route == null) return null;
+
+    if (route.assignedDriverId != null) {
+      return getDriverById(route.assignedDriverId!);
+    }
+
+    final candidates = _drivers.where((d) {
+      if (_hasTimeConflict(d, route)) return false;
+      // Direction-aware: a driver is only matched to a ride that departs from
+      // where they currently are (no deadheading). Brand-new drivers (no current
+      // city yet) are available to start from any origin.
+      final city = driverCurrentCity(d);
+      return city == null ||
+          city.toLowerCase() == route.origin.toLowerCase();
+    }).toList()
+      ..sort((a, b) {
+        final byLoad =
+            a.assignedRouteIds.length.compareTo(b.assignedRouteIds.length);
+        return byLoad != 0 ? byLoad : a.id.compareTo(b.id);
+      });
+
+    if (candidates.isEmpty) return null;
+
+    final chosen = candidates.first;
+    assignDriverToRoute(chosen.id, routeId);
+    return getDriverById(chosen.id);
+  }
+
+  /// True if [driver] already has a route whose time window overlaps [newRoute].
+  bool _hasTimeConflict(DriverModel driver, RouteModel newRoute) {
+    final bStart = newRoute.departureTime;
+    final bEnd = newRoute.departureTime.add(newRoute.duration);
+    for (final routeId in driver.assignedRouteIds) {
+      final r = getRouteById(routeId);
+      if (r == null) continue;
+      final aStart = r.departureTime;
+      final aEnd = r.departureTime.add(r.duration);
+      if (aStart.isBefore(bEnd) && bStart.isBefore(aEnd)) return true;
+    }
+    return false;
   }
 
   // Trip status operations

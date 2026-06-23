@@ -2,28 +2,46 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import '../models/route_model.dart';
-import '../services/mock_data_service.dart';
+import '../models/vehicle_type.dart';
+import '../services/firestore_data_service.dart';
 import '../theme.dart';
 import 'checkout_page.dart';
 
 class SeatSelectionPage extends StatefulWidget {
   final RouteModel route;
+  final String? pickupAddress;
+  final String? dropoffAddress;
 
-  const SeatSelectionPage({super.key, required this.route});
+  const SeatSelectionPage({
+    super.key,
+    required this.route,
+    this.pickupAddress,
+    this.dropoffAddress,
+  });
 
   @override
   State<SeatSelectionPage> createState() => _SeatSelectionPageState();
 }
 
 class _SeatSelectionPageState extends State<SeatSelectionPage> {
-  final _dataService = MockDataService();
+  final _dataService = FirestoreDataService();
   final Set<int> _selectedSeats = {};
-  late Set<int> _takenSeats;
+  Set<int> _takenSeats = {};
+  bool _loadingSeats = true;
 
   @override
   void initState() {
     super.initState();
-    _takenSeats = _dataService.getTakenSeats(widget.route.id);
+    _loadTakenSeats();
+  }
+
+  Future<void> _loadTakenSeats() async {
+    final taken = await _dataService.getTakenSeats(widget.route.id);
+    if (!mounted) return;
+    setState(() {
+      _takenSeats = taken;
+      _loadingSeats = false;
+    });
   }
 
   void _toggleSeat(int seatNumber) {
@@ -50,6 +68,8 @@ class _SeatSelectionPageState extends State<SeatSelectionPage> {
         builder: (_) => CheckoutPage(
           route: widget.route,
           selectedSeats: _selectedSeats.toList()..sort(),
+          pickupAddress: widget.pickupAddress,
+          dropoffAddress: widget.dropoffAddress,
         ),
       ),
     );
@@ -180,19 +200,27 @@ class _SeatSelectionPageState extends State<SeatSelectionPage> {
                     const SizedBox(height: 20),
 
                     // Passenger seats row
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        for (int i = 1; i <= widget.route.totalSeats; i++)
-                          Builder(
-                            builder: (context) {
-                              final isTaken = _takenSeats.contains(i);
-                              final isSelected = _selectedSeats.contains(i);
-                              return _buildSeat(i, isTaken, isSelected);
-                            },
-                          ),
-                      ],
-                    ),
+                    if (_loadingSeats)
+                      const Padding(
+                        padding: EdgeInsets.symmetric(vertical: 16),
+                        child: CircularProgressIndicator(),
+                      )
+                    else
+                      Wrap(
+                        alignment: WrapAlignment.center,
+                        spacing: 4,
+                        runSpacing: 12,
+                        children: [
+                          for (int i = 1; i <= widget.route.totalSeats; i++)
+                            Builder(
+                              builder: (context) {
+                                final isTaken = _takenSeats.contains(i);
+                                final isSelected = _selectedSeats.contains(i);
+                                return _buildSeat(i, isTaken, isSelected);
+                              },
+                            ),
+                        ],
+                      ),
                     const SizedBox(height: 20),
 
                     // Comfort note
@@ -208,7 +236,7 @@ class _SeatSelectionPageState extends State<SeatSelectionPage> {
                           Icon(Icons.airline_seat_recline_normal_outlined, size: 16, color: AppTheme.primaryColor),
                           const SizedBox(width: 6),
                           Text(
-                            'Comfortable ${widget.route.totalSeats}-seat car ride',
+                            '${widget.route.vehicleType.label} \u00b7 ${widget.route.totalSeats} seats',
                             style: GoogleFonts.inter(fontSize: 12, color: AppTheme.primaryColor, fontWeight: FontWeight.w500),
                           ),
                         ],

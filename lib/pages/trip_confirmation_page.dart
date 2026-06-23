@@ -1,4 +1,3 @@
-import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
@@ -6,39 +5,10 @@ import '../models/booking_model.dart';
 import '../services/mock_data_service.dart';
 import '../theme.dart';
 
-class TripConfirmationPage extends StatefulWidget {
-  final String bookingId;
+class TripConfirmationPage extends StatelessWidget {
+  final BookingModel booking;
 
-  const TripConfirmationPage({super.key, required this.bookingId});
-
-  @override
-  State<TripConfirmationPage> createState() => _TripConfirmationPageState();
-}
-
-class _TripConfirmationPageState extends State<TripConfirmationPage> {
-  final _dataService = MockDataService();
-  late BookingModel? _booking;
-  Timer? _statusTimer;
-
-  @override
-  void initState() {
-    super.initState();
-    _booking = _dataService.getBookingById(widget.bookingId);
-    // Simulate real-time status updates
-    _statusTimer = Timer.periodic(const Duration(seconds: 5), (_) {
-      if (mounted) {
-        setState(() {
-          _booking = _dataService.getBookingById(widget.bookingId);
-        });
-      }
-    });
-  }
-
-  @override
-  void dispose() {
-    _statusTimer?.cancel();
-    super.dispose();
-  }
+  const TripConfirmationPage({super.key, required this.booking});
 
   Color _statusColor(TripStatus status) {
     switch (status) {
@@ -75,15 +45,6 @@ class _TripConfirmationPageState extends State<TripConfirmationPage> {
 
   @override
   Widget build(BuildContext context) {
-    if (_booking == null) {
-      return Scaffold(
-        appBar: AppBar(title: const Text('Booking Not Found')),
-        body: const Center(child: Text('Booking not found')),
-      );
-    }
-
-    final booking = _booking!;
-
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
@@ -217,6 +178,11 @@ class _TripConfirmationPageState extends State<TripConfirmationPage> {
 
             const SizedBox(height: 16),
 
+            // Your Driver
+            _driverCard(booking),
+
+            const SizedBox(height: 16),
+
             // Pickup Point
             Container(
               width: double.infinity,
@@ -230,7 +196,10 @@ class _TripConfirmationPageState extends State<TripConfirmationPage> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Pickup Point',
+                    (booking.dropoffPoint != null &&
+                            booking.dropoffPoint!.isNotEmpty)
+                        ? 'Pickup & Drop-off'
+                        : 'Pickup Point',
                     style: GoogleFonts.inter(
                       fontSize: 16,
                       fontWeight: FontWeight.w700,
@@ -265,6 +234,37 @@ class _TripConfirmationPageState extends State<TripConfirmationPage> {
                       ),
                     ],
                   ),
+                  if (booking.dropoffPoint != null &&
+                      booking.dropoffPoint!.isNotEmpty) ...[
+                    const SizedBox(height: 12),
+                    Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: AppTheme.primaryDark.withValues(alpha: 0.08),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: Icon(
+                            Icons.flag_outlined,
+                            color: AppTheme.primaryDark,
+                            size: 20,
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Text(
+                            booking.dropoffPoint!,
+                            style: GoogleFonts.inter(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w500,
+                              color: AppTheme.primaryDark,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
                   const SizedBox(height: 16),
                   // Map placeholder
                   Container(
@@ -489,6 +489,77 @@ class _TripConfirmationPageState extends State<TripConfirmationPage> {
           child: Text(text, style: GoogleFonts.inter(fontSize: 13, color: AppTheme.textSecondary)),
         ),
       ],
+    );
+  }
+
+  Widget _driverCard(BookingModel booking) {
+    final assigned = booking.assignedDriverName != null;
+    final driver = booking.assignedDriverId != null
+        ? MockDataService().getDriverById(booking.assignedDriverId!)
+        : null;
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppTheme.borderColor),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Your Driver',
+            style: GoogleFonts.inter(
+              fontSize: 16,
+              fontWeight: FontWeight.w700,
+              color: AppTheme.primaryDark,
+            ),
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              CircleAvatar(
+                radius: 22,
+                backgroundColor: AppTheme.primaryColor.withValues(alpha: 0.1),
+                child: Icon(
+                  assigned ? Icons.person : Icons.hourglass_empty,
+                  color: AppTheme.primaryColor,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      assigned
+                          ? booking.assignedDriverName!
+                          : 'Pending assignment',
+                      style: GoogleFonts.inter(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w600,
+                        color: AppTheme.primaryDark,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      assigned
+                          ? (driver?.phone ?? 'Driver assigned')
+                          : "We'll notify you when a driver is assigned",
+                      style: GoogleFonts.inter(
+                        fontSize: 13,
+                        color: AppTheme.textSecondary,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
     );
   }
 
