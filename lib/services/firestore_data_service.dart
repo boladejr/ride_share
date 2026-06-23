@@ -482,6 +482,42 @@ class FirestoreDataService {
     return claimed;
   }
 
+  /// Registers a driver into the shared active-assignment pool (in-memory mock +
+  /// Firestore `active_drivers`) so they can be auto-matched to rides
+  /// immediately (no approval step). A fresh driver has no current city, so
+  /// they're available to start from any origin. Safe to call from any
+  /// driver-onboarding path (apply form or signup-as-driver); idempotent.
+  Future<void> registerActiveDriver({
+    required String userId,
+    required String name,
+    required String email,
+    required String phone,
+  }) async {
+    _mockService.addActiveDriver(
+      id: userId,
+      name: name,
+      email: email,
+      phone: phone,
+    );
+
+    if (!_useFirestore || userId.isEmpty) return;
+    _init();
+
+    // Register the driver in the shared pool (doc id = their uid) so riders on
+    // other devices can be auto-matched to them.
+    try {
+      await _activeDrivers.doc(userId).set({
+        'name': name,
+        'currentCity': null,
+        'busyUntil': null,
+        'assignedCount': 0,
+        'createdAt': FieldValue.serverTimestamp(),
+      });
+    } catch (_) {
+      // Already registered or write blocked; pool entry is best-effort.
+    }
+  }
+
   Future<void> saveDriverApplication({
     required String userId,
     required String name,
@@ -492,8 +528,8 @@ class FirestoreDataService {
   }) async {
     // Add the driver to the active assignment pool right away so they can start
     // getting matched to rides immediately (no approval step).
-    _mockService.addActiveDriver(
-      id: userId,
+    await registerActiveDriver(
+      userId: userId,
       name: name,
       email: email,
       phone: phone,
@@ -501,23 +537,6 @@ class FirestoreDataService {
 
     if (!_useFirestore) return;
     _init();
-
-    // Register the driver in the shared pool (doc id = their uid) so riders on
-    // other devices can be auto-matched to them. A fresh driver has no current
-    // city, so they're available to start from any origin.
-    if (userId.isNotEmpty) {
-      try {
-        await _activeDrivers.doc(userId).set({
-          'name': name,
-          'currentCity': null,
-          'busyUntil': null,
-          'assignedCount': 0,
-          'createdAt': FieldValue.serverTimestamp(),
-        });
-      } catch (_) {
-        // Already registered or write blocked; pool entry is best-effort.
-      }
-    }
 
     await _firestore!.collection('driver_applications').add({
       'userId': userId,

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../services/firebase_auth_service.dart';
+import '../services/firestore_data_service.dart';
 import '../models/user_model.dart';
 import '../theme.dart';
 
@@ -20,6 +21,7 @@ class SignUpPage extends StatefulWidget {
 
 class _SignUpPageState extends State<SignUpPage> {
   final _auth = FirebaseAuthService();
+  final _dataService = FirestoreDataService();
   bool _loading = false;
   final _nameController = TextEditingController();
   final _emailController = TextEditingController();
@@ -56,6 +58,24 @@ class _SignUpPageState extends State<SignUpPage> {
       password: _passwordController.text,
       role: _selectedRole,
     );
+
+    // If they signed up as a driver, add them to the shared active-assignment
+    // pool right away (same as the Drive page "Apply to drive" form) so they can
+    // be auto-matched to rides immediately, then retroactively claim any
+    // already-pending rides headed their way.
+    if (user != null && _selectedRole == UserRole.driver) {
+      await _dataService.registerActiveDriver(
+        userId: user.id,
+        name: user.name,
+        email: _emailController.text,
+        phone: _phoneController.text,
+      );
+      await _dataService.retroMatchDriver(
+        driverId: user.id,
+        driverName: user.name,
+      );
+    }
+
     setState(() => _loading = false);
 
     if (user != null) {
